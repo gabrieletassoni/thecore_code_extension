@@ -1,0 +1,16 @@
+// See https://containers.dev/implementors/json_reference/ for configuration reference
+{
+	"name": "Thecore VSCode Extension",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"remoteUser": "node",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"ms-vscode.extension-test-runner"
+			]
+		}
+	}
+}
