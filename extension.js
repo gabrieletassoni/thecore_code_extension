@@ -8,6 +8,11 @@ const vscode = require('vscode');
 /**
  * @param {vscode.ExtensionContext} context
  */
+/**
+ * Activates the extension.
+ * 
+ * @param {vscode.ExtensionContext} context - The extension context.
+ */
 function activate(context) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)

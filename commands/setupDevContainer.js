@@ -3,6 +3,9 @@
 const vscode = require('vscode');
 
 // The code you place here will be executed every time your command is executed
+/**
+ * Sets up a Thecore 3 Devcontainer.
+ */
 function setupDevContainer() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');

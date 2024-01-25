@@ -3,6 +3,9 @@
 const vscode = require('vscode');
 
 // The code you place here will be executed every time your command is executed
+/**
+ * Creates a new Thecore 3 app in the current workspace.
+ */
 function createApp() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Creating a Thecore 3 App.');
@@ -258,21 +261,7 @@ function createApp() {
         // Write the Gemfile
         fs.writeFileSync(gemfile, gemfileContentWithGems);
 
-        /* Run the following commands:
-            # Install the gems
-            bundle install
-            rails generate devise:install
-            rails g rails_admin:install app --asset=sprockets
-            # Rails Admin added sassc gem, so I need to bundle install before going on
-            bundle install
-            rails active_storage:install
-            rails action_text:install
-            # To setup newly added imge_processing gem
-            bundle install
-            rails action_mailbox:install
-            rails g cancan:ability
-            rails g erd:install
-        */
+        /* Run the following commands: */
         exec(`bundle install`);
         exec(`rails generate devise:install`);
         exec(`rails g rails_admin:install app --asset=sprockets`);

@@ -3,6 +3,9 @@
 const vscode = require('vscode');
 
 // The code you place here will be executed every time your command is executed
+/**
+ * Releases Thecore 3 App.
+ */
 function releaseApp() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Releasing this Thecore 3 App.');
@@ -131,7 +134,7 @@ function releaseApp() {
                         }
                     });
                 });
-            }
+            });
         });
     }
 }
