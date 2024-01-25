@@ -12,16 +12,50 @@
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "thecore.setupDevcontainer",
-      "title": "Thecore 3: Setup Devcontainer"
-    },{
-      "command": "thecore.createApp",
-      "title": "Thecore 3: Create an App"
-    },{
-      "command": "thecore.releaseApp",
-      "title": "Thecore 3: Release this App"
-    }]
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "thecore.setupDevcontainer",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+        },
+        {
+          "command": "thecore.createApp",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+        },
+        {
+          "command": "thecore.releaseApp",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+        }
+      ],
+      "thecore.main": [
+        {
+          "command": "thecore.setupDevcontainer",
+          "group": "Thecore 3"
+        },
+        {
+          "command": "thecore.createApp",
+          "group": "Thecore 3"
+        },
+        {
+          "command": "thecore.releaseApp",
+          "group": "Thecore 3"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "thecore.setupDevcontainer",
+        "title": "Thecore 3: Setup Devcontainer"
+      },
+      {
+        "command": "thecore.createApp",
+        "title": "Thecore 3: Create an App"
+      },
+      {
+        "command": "thecore.releaseApp",
+        "title": "Thecore 3: Release this App"
+      }
+    ]
   },
   "scripts": {
     "lint": "eslint .",

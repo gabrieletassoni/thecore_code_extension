@@ -431,7 +431,12 @@ function createApp() {
         const custombuildsDir = path.join(vendorDir, 'custombuilds');
         const deploytargetsDir = path.join(vendorDir, 'deploytargets');
         if (!fs.existsSync(custombuildsDir)) {
-            fs.mkdirSync(custombuildsDir);
+            fs.mkdirSync(custombuildsDir, { recursive: true }, (err) => {
+                if (err) {
+                    vscode.window.showErrorMessage(`Error creating the ${custombuildsDir} directory: ${err.message}`);
+                    return;
+                }
+            });
         }
         if (!fs.existsSync(deploytargetsDir)) {
             fs.mkdirSync(deploytargetsDir);
