@@ -274,10 +274,10 @@ function createApp() {
         exec(`rails g erd:install`);
 
         /* Add to the gemfileContent the following lines:
-            gem 'model_driven_api', '~> 3.0'
-            gem 'thecore_ui_rails_admin', '~> 3.0'
+            gem 'model_driven_api', '~> 3.1'
+            gem 'thecore_ui_rails_admin', '~> 3.2'
         */
-        const gemfileContentWithGems2 = gemfileContentWithGems + "\ngem 'model_driven_api', '~> 3.0'\ngem 'thecore_ui_rails_admin', '~> 3.0'";
+        const gemfileContentWithGems2 = gemfileContentWithGems + "\ngem 'model_driven_api', '~> 3.1'\ngem 'thecore_ui_rails_admin', '~> 3.2'";
         // Write the Gemfile
         fs.writeFileSync(gemfile, gemfileContentWithGems2);
         // Run the bundle install command
