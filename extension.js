@@ -18,29 +18,23 @@ function activate(context) {
 	// Now provide the implementation of the command with  registerCommand
 	// The commandId parameter must match the command field in package.json
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.setupDevcontainer', function () {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
+		// Call the business logic which is present into the commands directory in the setupDevContainer.js file
+		require('./commands/setupDevContainer').setupDevContainer();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.createApp', function () {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Creating a Thecore 3 App.');
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/createApp').createApp();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Releasing this Thecore 3 App.');
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/releaseApp').releaseApp();
 	}));
 }
 
 // This method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
 	activate,
