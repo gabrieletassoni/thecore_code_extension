@@ -25,6 +25,10 @@
         {
           "command": "thecore.releaseApp",
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+        },
+        {
+          "command": "thecore.createATOM",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
         }
       ],
       "thecore.main": [
@@ -38,6 +42,10 @@
         },
         {
           "command": "thecore.releaseApp",
+          "group": "Thecore 3"
+        },
+        {
+          "command": "thecore.createATOM",
           "group": "Thecore 3"
         }
       ]
@@ -54,6 +62,10 @@
       {
         "command": "thecore.releaseApp",
         "title": "Thecore 3: Release this App"
+      },
+      {
+        "command": "thecore.createATOM",
+        "title": "Thecore 3: Create an ATOM"
       }
     ]
   },

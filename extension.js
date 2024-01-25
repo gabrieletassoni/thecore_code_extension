@@ -36,6 +36,11 @@ function activate(context) {
 		// Call the business logic which is present into the commands directory in the createApp.js file
 		require('./commands/releaseApp').releaseApp();
 	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.createATOM', function () {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/createATOM').createATOM();
+	}));
 }
 
 // This method is called when your extension is deactivated
