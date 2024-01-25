@@ -535,8 +535,6 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         });
         fs.writeFileSync(gitlabCiFile, gitlabCiYaml);
 
-
-        
         // add Thecore dependecies to the submodule Gemfile and gemspec, the two Thecore gems to add are: model_driven_api and thecore_ui_rails_admin both at version ~3.0
         const gemfile = path.join(submodulesDir, submoduleNameDashcase, 'Gemfile');
         let gemfileContent = fs.readFileSync(gemfile, 'utf8');
@@ -549,7 +547,7 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         const lastEndIndex = gemspecContent.lastIndexOf('end');
         gemspecContent = `${gemspecContent.substring(0, lastEndIndex)}  spec.add_dependency 'model_driven_api', '~> 3.1'\n  spec.add_dependency 'thecore_ui_rails_admin', '~> 3.2'\n${gemspecContent.substring(lastEndIndex)}`;
         fs.writeFileSync(gemspec, gemspecContent);
-        
+
         // Adding the submodule to the Gemfile.base
         const gemfileBase = path.join(workspaceRoot, 'Gemfile.base');
         fs.appendFileSync(gemfileBase, `\ngem '${submoduleNameDashcase}', path: 'vendor/submodules/${submoduleNameDashcase}'`);

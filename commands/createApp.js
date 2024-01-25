@@ -438,7 +438,7 @@ function createApp() {
         const keepFile2 = path.join(deploytargetsDir, '.keep');
         if (!fs.existsSync(keepFile2)) {
             fs.writeFileSync(keepFile2, '');
-        } 
+        }
 
         // Add and commit the changes
         exec(`git add .`);
