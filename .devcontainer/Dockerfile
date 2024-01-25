@@ -4,7 +4,7 @@ FROM node:18
 RUN apt update && apt install -y less man-db sudo
 
 # Install yo and generator-code using npm in global mode
-RUN npm install -g yo generator-code
+RUN npm install -g yo generator-code @vscode/vsce
 
 # Ensure default `node` user has access to `sudo`
 ARG USERNAME=node
