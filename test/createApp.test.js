@@ -60,7 +60,7 @@ suite('Extension Test Suite', () => {
 
 		// Assert that the fs.existsSync method was called with the correct paths
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'app'));
-		const workspaceRoot = '/path/to/workspace'; // Replace '/path/to/workspace' with the actual workspace root path
+		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'bin'));
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'config'));

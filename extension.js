@@ -51,11 +51,6 @@ function activate(context) {
 		// Call the business logic which is present into the commands directory in the createApp.js file
 		require('./commands/addMemberAction').perform();
 	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('thecore.addCollectionAction', function () {
-		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/addCollectionAction').perform();
-	}));
 }
 
 // This method is called when your extension is deactivated

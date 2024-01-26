@@ -1,66 +1,45 @@
-# thecore README
+# Thecore 3 VS Code Extension
 
-This is the README for your extension "thecore". After writing up a brief description, we recommend including the following sections.
+Thecore 3 is a Visual Studio Code extension that provides a set of commands to enhance your development workflow. These commands are available in the command palette and under the "Thecore 3" menu.
+All the commands are made to enforce the adoption of conventions on files and folders names and structures, and to automate the creation of new applications and engines.
+It enforces the usage of introspection and reflection to make the code more readable and maintainable and adaptive.
 
-## Features
+## Commands
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+The extension provides the following commands:
 
-For example if there is an image subfolder under your extension project workspace:
+- `thecore.setupDevcontainer`: This command sets up a development container for your application. It is available when the explorer viewlet is visible and focused, and the root resource is selected in the explorer.
 
-\!\[feature X\]\(images/feature-x.png\)
+- `thecore.createApp`: This command creates a new application. It is available under the same conditions as `thecore.setupDevcontainer`.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- `thecore.createATOM`: This command creates a new rails engine, called ATOM in the Thecore context, to encapsulate reusable logic. It is available under the same conditions as `thecore.createATOM`.
 
-## Requirements
+- `thecore.addRootAction`: This command creates a new root action, available in the main menu of the rails_admin backend UI. It is available only by clicking on a folder in the explorer viewlet. The root actions are rails_admin sections in the main menu which enable dashboard like views.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- `thecore.addMemberAction`: This command creates a new member action, available each rows of the list view of a Model. It is available only by clicking on a folder in the explorer viewlet. The member actions are visualized as buttons or links in the commands section of each row of the Models in which they are available.
 
-## Extension Settings
+- `thecore.addModel`: This command creates a new Ruby on Rails Model adding all the files and folders which enforce a more dinamic approach to development, in order to simplify it by using conventions over configurations and sane defaults for simple funcitonality extension. The command will ask you for the name of the model, the fields for the migration and the name of the engine in which it will be created. It is available only by clicking on a folder in the explorer viewlet.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+- `thecore.releaseApp`: This command releases your application. It is also available under the same conditions.
 
-For example:
+## Usage
 
-This extension contributes the following settings:
+To use these commands, follow these steps:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+1. Open the command palette with `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS).
+2. Type the name of the command (e.g., "Thecore: Setup Devcontainer") and press `Enter`.
 
-## Known Issues
+Alternatively, you can access these commands from the "Thecore 3" menu:
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+1. Right-click in the explorer viewlet to open the context menu.
+    - the `addRootAction`, `addMemberAction` and `addModel` commands are available only by right clicking on folders.
+2. Hover over "Thecore 3" to open the submenu.
+3. Click on the command you want to execute.
 
-## Release Notes
+## Installation
 
-Users appreciate release notes as you update your extension.
+To install the extension, download the `.vsix` file from the [extensions repository](https://github.com/gabrieletassoni/thecore_code_extension) and install it in VS Code using the "Install from VSIX..." command in the Extensions view command drop-down, or the `Extensions: Install from VSIX...` command in the Command Palette.
 
-### 1.0.0
+## Contributing
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-* https://code.visualstudio.com/api/get-started/your-first-extension
-
-**Enjoy!**
+Contributions are welcome! Please submit a pull request or create an issue to propose changes or report bugs.

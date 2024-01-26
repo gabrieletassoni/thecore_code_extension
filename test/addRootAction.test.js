@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const fs = require('fs');
+const path = require('path');
 const { perform } = require('../commands/addRootAction');
 const jest = require('jest');
 const expect = require('expect');
@@ -24,7 +25,7 @@ suite('Extension Test Suite', () => {
 		vscode.window.showInputBox = jest.fn().mockResolvedValue('root_action');
 
 		// Call the perform function
-		perform({ fsPath: '/path/to/atom' });
+		perform({ fsPath: path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "test", "samples", "atom") });
 
 		// Assert that the vscode.window.showInformationMessage method was called with the correct message
 		expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Adding a root Action to the current ATOM.');
