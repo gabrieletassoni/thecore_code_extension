@@ -15,10 +15,6 @@ function addRootAction(context) {
     // Check if we are inside a workspace
     if (!require('../libs/check').workspacePresence()) { return; }
 
-    // Check if the workspace root is a Ruby on Rails app
-    const rorDirs = require('../libs/check').rubyOnRailsAppValidity();
-    if (!rorDirs) { return; }
-
     // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/root_actions folder
     const atomDir = path.dirname(context.fsPath);
     if (!fs.existsSync(atomDir)) {
@@ -29,12 +25,18 @@ function addRootAction(context) {
     const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
     const atomRootActionsDir = path.join(atomDir, 'lib', 'root_actions');
     if (!fs.existsSync(atomGemspec) || !fs.existsSync(atomRootActionsDir)) {
-        vscode.window.showErrorMessage('The folder right clicked is not a valid Thecore 3 ATOM. Please open a Thecore 3 app and try again.');
+        vscode.window.showErrorMessage('The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.');
         return;
     }
 
+    // Get the rootActionName from the user and check if it's snakecase, if it's not, show an error message and return
+    const rootActionName = vscode.window.showInputBox({ prompt: 'Please enter the name of the root action to add.' });
+    if (!rootActionName) { return; }
+    if (!rootActionName.match(/^[a-z0-9_]+$/)) {
+        vscode.window.showErrorMessage('The root action name must be snakecase. Please try again.');
+        return;
+    }
     // Check if the root action already exists
-    const rootActionName = path.basename(context.fsPath);
     const rootActionFile = path.join(atomRootActionsDir, `${rootActionName}.rb`);
     if (fs.existsSync(rootActionFile)) {
         vscode.window.showErrorMessage(`The root action ${rootActionName} already exists. Please try again.`);
@@ -76,8 +78,8 @@ function addRootAction(context) {
     ].join('\n');
     fs.writeFileSync(rootActionFile, rootActionContent);
 
-    // Using the same way, add a file in app/views/rails_admin/main with the following content, replacing tcp_debug with the root action name and creating the folders if they do not exists:
-    const mainViewFile = path.join(rorDirs.appDir, 'views', 'rails_admin', 'main', `${rootActionName}.html.erb`);
+    // Using the same logic, add a file in app/views/rails_admin/main with the following content, replacing tcp_debug with the root action name and creating the folders if they do not exists:
+    const mainViewFile = path.join(atomDir, "app", 'views', 'rails_admin', 'main', `${rootActionName}.html.erb`);
     const mainViewContent = [
         `<div class="card mb-3">`,
         `    <div class="card-body">`,
@@ -88,9 +90,9 @@ function addRootAction(context) {
     fs.mkdirSync(path.dirname(mainViewFile), { recursive: true });
     fs.writeFileSync(mainViewFile, mainViewContent);
 
-    // Add the root action to the rails_admin initializer, if not already present, tto the after_initialize.rb file
+    // Add the root action to the rails_admin initializer, if not already present, into after_initialize.rb file
     // Below the `config.after_initialize do` line add the `require 'root_actions/tcp_debug'` line, obviously replacing tcp_debug with the root action name
-    const afterInitializeFile = path.join(rorDirs.configDir, 'initializers', 'after_initialize.rb');
+    const afterInitializeFile = path.join(atomDir, "config", 'initializers', 'after_initialize.rb');
     const afterInitializeContent = fs.readFileSync(afterInitializeFile).toString();
     if (!afterInitializeContent.includes(`require 'root_actions/${rootActionName}'`)) {
         const afterInitializeLines = afterInitializeContent.split('\n');
@@ -101,7 +103,7 @@ function addRootAction(context) {
 
     // Using the same logic, add to the config/initializers/assets.rb file the following line, replacing tcp_debug with the root action name
     // Rails.application.config.assets.precompile += %w( root_actions/main_tcp_debug.js root_actions/main_tcp_debug.css )
-    const assetsFile = path.join(rorDirs.configDir, 'initializers', 'assets.rb');
+    const assetsFile = path.join(atomDir, "config", 'initializers', 'assets.rb');
     const assetsContent = fs.readFileSync(assetsFile).toString();
     if (!assetsContent.includes(`Rails.application.config.assets.precompile += %w( root_actions/main_${rootActionName}.js root_actions/main_${rootActionName}.css )`)) {
         const assetsLines = assetsContent.split('\n');
@@ -112,14 +114,14 @@ function addRootAction(context) {
 
     // Add to vendor/submodules/thecore_tcp_debug/app/assets/stylesheets/main_tcp_debug.scss the following line, replacing tcp_debug with the root action name
     // .tcp-debug { background-color: #f00; }
-    const mainScssFile = path.join(rorDirs.vendorDir, 'submodules', 'thecore_tcp_debug', 'app', 'assets', 'stylesheets', `main_${rootActionName}.scss`);
+    const mainScssFile = path.join(atomDir, "vendor", 'submodules', 'thecore_tcp_debug', 'app', 'assets', 'stylesheets', `main_${rootActionName}.scss`);
     const mainScssContent = [
         `.${rootActionName} { background-color: #f00; }`,
     ].join('\n');
     fs.writeFileSync(mainScssFile, mainScssContent);
 
     // Add to vendor/submodules/thecore_tcp_debug/app/assets/javascripts/main_tcp_debug.js the following line, replacing tcp_debug with the root action name
-    const mainJsFile = path.join(rorDirs.vendorDir, 'submodules', 'thecore_tcp_debug', 'app', 'assets', 'javascripts', `main_${rootActionName}.js`);
+    const mainJsFile = path.join(atomDir, "vendor", 'submodules', 'thecore_tcp_debug', 'app', 'assets', 'javascripts', `main_${rootActionName}.js`);
     // The content above to the main_js_file:
     const mainJsContent = [
         `$(document).on('turbo:load', function (event) {`,
