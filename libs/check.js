@@ -3,26 +3,32 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const execSync = require('child_process').execSync;
 
-function workspacePresence() {
+function workspaceExixtence(outputChannel) {
+    outputChannel.appendLine('Checking if a workspace is open.');
     // Before checking for devcontainer directory, we need to check if the workspace is open
     if (vscode.workspace.workspaceFolders === undefined) {
-        vscode.window.showErrorMessage('No workspace is open. Please open a workspace and try again.');
+        outputChannel.appendLine('No workspace is open. Please open a workspace and try again.');
         return false;
     }
+    outputChannel.appendLine('A workspace is open.');
     return true;
 }
 
-function workspaceEmpty() {
+function workspaceEmptiness(outputChannel) {
+    outputChannel.appendLine('Checking if the workspace is empty.');
     // Check if the workspace is empty
     if (vscode.workspace.workspaceFolders.length > 1) {
-        vscode.window.showErrorMessage('The workspace is not empty. Please open an empty workspace and try again.');
+        outputChannel.appendLine('The workspace is not empty. Please open an empty workspace and try again.');
         return false;
     }
+    outputChannel.appendLine('The workspace is empty.');
     return true;
 }
 
-function rubyOnRailsAppValidity() {
+function rubyOnRailsAppValidity(hideErrorMessage = false, outputChannel) {
+    outputChannel.appendLine('Checking if the workspace root is a Ruby on Rails app.');
     // Check if the workspace root is a Ruby on Rails app
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
     const appDir = path.join(workspaceRoot, 'app');
@@ -51,38 +57,42 @@ function rubyOnRailsAppValidity() {
         vendorDir,
     };
     if (!fs.existsSync(appDir) || !fs.existsSync(binDir) || !fs.existsSync(configDir) || !fs.existsSync(dbDir) || !fs.existsSync(libDir) || !fs.existsSync(logDir) || !fs.existsSync(publicDir) || !fs.existsSync(storageDir) || !fs.existsSync(testDir) || !fs.existsSync(tmpDir) || !fs.existsSync(vendorDir)) {
-        vscode.window.showErrorMessage('The workspace root is not a Ruby on Rails app. Please open a Ruby on Rails app and try again.');
+        if(!hideErrorMessage) outputChannel.appendLine('The workspace root is not a Ruby on Rails app. Please open a Ruby on Rails app and try again.');
         return false;
     }
+    outputChannel.appendLine('The workspace root is a Ruby on Rails app.');
     return dirsObject;
 }
 
-function fileExists(filePath) {
+function fileExistence(filePath, outputChannel) {
+    outputChannel.appendLine(`Checking if the file ${filePath} exists.`);
     // Check if a file exists
     if (!fs.existsSync(filePath)) {
-        vscode.window.showErrorMessage(`The file ${filePath} does not exist.`);
+        outputChannel.appendLine(`The file ${filePath} does not exist.`);
         return false;
     }
+    outputChannel.appendLine(`The file ${filePath} exists.`);
     return true;
 }
 
-function commandExists(command) {
-    // This function checks if a command exists
+function commandExistence(command, outputChannel) {
+    outputChannel.appendLine(`Checking if the command ${command} exists.`);
+    // This function checks if a command exists using execs, so it is OS agnostic, if it does not exist, it returns to the caller false, otherwise true
     try {
-        const execSync = require('child_process').execSync;
-        execSync(`which ${command}`);
+        const stdout = execSync(`${command} --version`, { encoding: 'utf8', stdio: 'pipe' });
+        outputChannel.appendLine(stdout);
         return true;
     } catch (error) {
-        vscode.window.showErrorMessage(`The command ${command} does not exist.`);
+        outputChannel.appendLine(`The command ${command} does not exist:\n${error}`);
         return false;
     }
 }
 
 // Make the following code available to the extension.js file
 module.exports = {
-    workspacePresence,
+    workspaceExixtence,
     rubyOnRailsAppValidity,
-    fileExists,
-    workspaceEmpty,
-    commandExists,
+    fileExistence,
+    workspaceEmptiness,
+    commandExistence,
 }

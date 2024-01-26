@@ -1,20 +1,33 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-const vscode = require('vscode');
+const exec = require('child_process').exec;
 
-function execOrReturnFalse(command, args, options) {
-    // This function executes a command and returns false if the command fails
-    try {
-        const execSync = require('child_process').execSync;
-        execSync(command, args, options);
-        return true;
-    } catch (error) {
-        vscode.window.showErrorMessage(`The command ${command} failed.`);
-        return false;
-    }
-}
+/**
+ * Executes a shell command.
+ * 
+ * @param {string} command - The command to execute.
+ * @param {string} workingDirectory - The working directory where the command will be executed.
+ * @param {vscode.OutputChannel} outputChannel - The output channel where the stdout and stderr will be redirected.
+ */
+const execShell = (cmd, workingDirectory, outputChannel) =>
+    new Promise((resolve, reject) => {
+        // Write to outputchannel an hourglass element followed by the description of what's happening
+        outputChannel.appendLine(`⌛ Running command ${cmd}`);
 
-// Make the following code available to the extension.js file
+        const interval = setInterval(() => {
+            outputChannel.append('.');
+        }, 800);
+
+        exec(cmd, { cwd: workingDirectory }, (err, out) => {
+            clearInterval(interval);
+
+            if (err) {
+                outputChannel.appendLine(err.stdout.toString());
+                return reject(err);
+            }
+            outputChannel.appendLine(out.toString());
+            return resolve(out);
+        });
+    });
+
 module.exports = {
-    execOrReturnFalse,
+    execShell
 }

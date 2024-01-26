@@ -103,7 +103,7 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         fs.writeFileSync(gemspecFile, newGemspec);
 
         // Overwrite the .gitignore file with the string provided here
-        require('../libs/configs').writeGitignoreFile(path.join(submodulesDir, submoduleNameDashcase));
+        require('../libs/configs').createGitignoreFile(path.join(submodulesDir, submoduleNameDashcase));
 
         // create all these folders in the submodule root, if they not already exist and in this case also add a .keep empty file: db/migrate app/models/concerns/api app/models/concerns/rails_admin config/initializers config/locales
         const dbMigrateDir = path.join(submodulesDir, submoduleNameDashcase, 'db', 'migrate');
