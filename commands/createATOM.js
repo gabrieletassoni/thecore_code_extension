@@ -1,5 +1,6 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const path = require('path');
 
 // The code you place here will be executed every time your command is executed
 /**
@@ -10,37 +11,15 @@ function createATOM() {
     vscode.window.showInformationMessage('Creating a Thecore 3 ATOM.');
 
     // Check if we are inside a workspace
-    if (vscode.workspace.workspaceFolders === undefined) {
-        vscode.window.showErrorMessage('No workspace is open. Please open a workspace and try again.');
-        return;
-    }
+    if (!require('../libs/check').workspacePresence()) { return; }
 
     // Check if the workspace root is a Ruby on Rails app
-    const fs = require('fs');
-    const path = require('path');
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const appDir = path.join(workspaceRoot, 'app');
-    const binDir = path.join(workspaceRoot, 'bin');
-    const configDir = path.join(workspaceRoot, 'config');
-    const dbDir = path.join(workspaceRoot, 'db');
-    const libDir = path.join(workspaceRoot, 'lib');
-    const logDir = path.join(workspaceRoot, 'log');
-    const publicDir = path.join(workspaceRoot, 'public');
-    const storageDir = path.join(workspaceRoot, 'storage');
-    const testDir = path.join(workspaceRoot, 'test');
-    const tmpDir = path.join(workspaceRoot, 'tmp');
-    const vendorDir = path.join(workspaceRoot, 'vendor');
-    if (!fs.existsSync(appDir) || !fs.existsSync(binDir) || !fs.existsSync(configDir) || !fs.existsSync(dbDir) || !fs.existsSync(libDir) || !fs.existsSync(logDir) || !fs.existsSync(publicDir) || !fs.existsSync(storageDir) || !fs.existsSync(testDir) || !fs.existsSync(tmpDir) || !fs.existsSync(vendorDir)) {
-        vscode.window.showErrorMessage('The workspace root is not a Ruby on Rails app. Please open a Ruby on Rails app and try again.');
-        return;
-    }
+    const rorDirs = require('../libs/check').rubyOnRailsAppValidity();
+    if (!rorDirs) { return; }
 
     // Check if `./vendor/submodules/` exists
-    const submodulesDir = path.join(vendorDir, 'submodules');
-    if (!fs.existsSync(submodulesDir)) {
-        vscode.window.showErrorMessage('The workspace root is not a Ruby on Rails app with a Gemfile.base file in the root. Please open a Ruby on Rails app with a Gemfile.base file in the root and try again.');
-        return;
-    }
+    const submodulesDir = path.join(rorDirs.vendorDir, 'submodules');
+    if (!require('../libs/check').fileExists(submodulesDir)) { return; }
 
     // Asking the user for the name of the submodule
     vscode.window.showInputBox({
@@ -70,8 +49,19 @@ function createATOM() {
                         vscode.window.showInputBox({
                             placeHolder: 'Enter the url of the author, i.e. https://alchemic.it'
                         }).then((url) => {
+                            // Check if the email is actualy an email, otherwise show an error and return
+                            if (!email.includes('@')) {
+                                vscode.window.showErrorMessage('The email is not valid. Please enter a valid email and try again.');
+                                return;
+                            }
+
+                            // Check if the url is actualy an url, otherwise show an error and return
+                            if (!url.includes('http')) {
+                                vscode.window.showErrorMessage('The url is not valid. Please enter a valid url and try again.');
+                                return;
+                            }
                             // Create the rails engine
-                            createRailsEngine(submoduleName, submoduleNameDashcase, summary, description, author, email, url, submodulesDir, workspaceRoot);
+                            createRailsEngine(submoduleName, submoduleNameDashcase, summary, description, author, email, url, submodulesDir, rorDirs.workspaceRoot);
 
                         });
                     });
@@ -82,24 +72,11 @@ function createATOM() {
 }
 
 function createRailsEngine(submoduleName, submoduleNameDashcase, summary, description, author, email, url, submodulesDir, workspaceRoot) {
-
-    // Check if the email is actualy an email, otherwise show an error and return
-    if (!email.includes('@')) {
-        vscode.window.showErrorMessage('The email is not valid. Please enter a valid email and try again.');
-        return;
-    }
-
-    // Check if the url is actualy an url, otherwise show an error and return
-    if (!url.includes('http')) {
-        vscode.window.showErrorMessage('The url is not valid. Please enter a valid url and try again.');
-        return;
-    }
-
     // Creating the submodule using the `rails plugin new "$ENGINE_NAME" -fG --full` command from the submodulesDir
     const exec = require('child_process').exec;
     const fs = require('fs');
     const path = require('path');
-    exec(`cd ${submodulesDir} && rails plugin new "${submoduleNameDashcase}" -fG --full`, (err, stdout, stderr) => {
+    exec(`cd ${submodulesDir} && rails plugin new "${submoduleNameDashcase}" -fG --full`, (err, _stdout, _stderr) => {
         if (err) {
             vscode.window.showErrorMessage('The submodule creation failed. Please check the output for more information.');
             return;
@@ -126,173 +103,7 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         fs.writeFileSync(gemspecFile, newGemspec);
 
         // Overwrite the .gitignore file with the string provided here
-        const gitignore = ['# Created by https://www.toptal.com/developers/gitignore/api/osx,macos,ruby,linux,rails,windows',
-            '# Edit at https://www.toptal.com/developers/gitignore?templates=osx,macos,ruby,linux,rails,windows',
-            '### Linux ###',
-            '*~',
-            '# temporary files which can be created if a process still has a handle open of a deleted file',
-            '.fuse_hidden*',
-            '# KDE directory preferences',
-            '.directory',
-            '# Linux trash folder which might appear on any partition or disk',
-            '.Trash-*',
-            '# .nfs files are created when an open file is removed but is still being accessed',
-            '.nfs*',
-            '### macOS ###',
-            '# General',
-            '.DS_Store',
-            '.AppleDouble',
-            '.LSOverride',
-            '# Icon must end with two \r',
-            'Icon',
-            '# Thumbnails',
-            '._*',
-            '# Files that might appear in the root of a volume',
-            '.DocumentRevisions-V100',
-            '.fseventsd',
-            '.Spotlight-V100',
-            '.TemporaryItems',
-            '.Trashes',
-            '.VolumeIcon.icns',
-            '.com.apple.timemachine.donotpresent',
-            '# Directories potentially created on remote AFP share',
-            '.AppleDB',
-            '.AppleDesktop',
-            'Network Trash Folder',
-            'Temporary Items',
-            '.apdisk',
-            '### OSX ###',
-            '# General',
-            '# Icon must end with two \r',
-            '# Thumbnails',
-            '# Files that might appear in the root of a volume',
-            '# Directories potentially created on remote AFP share',
-            '### Rails ###',
-            '*.rbc',
-            'capybara-*.html',
-            '.rspec',
-            '/db/*.sqlite3',
-            '/db/*.sqlite3-journal',
-            '/db/*.sqlite3-[0-9]*',
-            '/public/system',
-            '/coverage/',
-            '/spec/tmp',
-            '*.orig',
-            'rerun.txt',
-            'pickle-email-*.html',
-            '# Ignore all logfiles and tempfiles.',
-            '/log/*',
-            '/tmp/*',
-            '!/log/.keep',
-            '!/tmp/.keep',
-            '# TODO Comment out this rule if you are OK with secrets being uploaded to the repo',
-            'config/initializers/secret_token.rb',
-            'config/master.key',
-            '# Only include if you have production secrets in this file, which is no longer a Rails default',
-            '# config/secrets.yml',
-            '# dotenv, dotenv-rails',
-            '# TODO Comment out these rules if environment variables can be committed',
-            '.env',
-            '.env.*',
-            '## Environment normalization:',
-            '/.bundle',
-            'vendor/bundle',
-            '# these should all be checked in to normalize the environment:',
-            '# Gemfile.lock, .ruby-version, .ruby-gemset',
-            '# unless supporting rvm < 1.11.0 or doing something fancy, ignore this:',
-            '.rvmrc',
-            '# if using bower-rails ignore default bower_components path bower.json files',
-            '/vendor/assets/bower_components',
-            '*.bowerrc',
-            'bower.json',
-            '# Ignore pow environment settings',
-            '.powenv',
-            '# Ignore Byebug command history file.',
-            '.byebug_history',
-            '# Ignore node_modules',
-            'node_modules/',
-            '# Ignore precompiled javascript packs',
-            '/public/packs',
-            '/public/packs-test',
-            '/public/assets',
-            '# Ignore yarn files',
-            '/yarn-error.log',
-            'yarn-debug.log*',
-            '.yarn-integrity',
-            '# Ignore uploaded files in development',
-            '/storage/*',
-            '!/storage/.keep',
-            '/public/uploads',
-            '### Ruby ###',
-            '*.gem',
-            '/.config',
-            '/InstalledFiles',
-            '/pkg/',
-            '/spec/reports/',
-            '/spec/examples.txt',
-            '/test/tmp/',
-            '/test/version_tmp/',
-            '/tmp/',
-            '# Used by dotenv library to load environment variables.',
-            '# .env',
-            '# Ignore Byebug command history file.',
-            '## Specific to RubyMotion:',
-            '.dat*',
-            '.repl_history',
-            'build/',
-            '*.bridgesupport',
-            'build-iPhoneOS/',
-            'build-iPhoneSimulator/',
-            '## Specific to RubyMotion (use of CocoaPods):',
-            '#',
-            '# We recommend against adding the Pods directory to your .gitignore. However',
-            '# you should judge for yourself, the pros and cons are mentioned at:',
-            '# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control',
-            '# vendor/Pods/',
-            '## Documentation cache and generated files:',
-            '/.yardoc/',
-            '/_yardoc/',
-            '/doc/',
-            '/rdoc/',
-            '/.bundle/',
-            '/lib/bundler/man/',
-            '# for a library or gem, you might want to ignore these files since the code is',
-            '# intended to run in multiple environments; otherwise, check them in:',
-            '# Gemfile.lock',
-            '# .ruby-version',
-            '# .ruby-gemset',
-            '# unless supporting rvm < 1.11.0 or doing something fancy, ignore this:',
-            '# Used by RuboCop. Remote config files pulled in from inherit_from directive.',
-            '# .rubocop-https?--*',
-            '### Windows ###',
-            '# Windows thumbnail cache files',
-            'Thumbs.db',
-            'Thumbs.db:encryptable',
-            'ehthumbs.db',
-            'ehthumbs_vista.db',
-            '# Dump file',
-            '*.stackdump',
-            '# Folder config file',
-            '[Dd]esktop.ini',
-            '# Recycle Bin used on file shares',
-            '$RECYCLE.BIN/',
-            '# Windows Installer files',
-            '*.cab',
-            '*.msi',
-            '*.msix',
-            '*.msm',
-            '*.msp',
-            '# Windows shortcuts',
-            '*.lnk',
-            '# End of https://www.toptal.com/developers/gitignore/api/osx,macos,ruby,linux,rails,windows',
-            '.passwords',
-            'vendor/bundle',
-            'config/database.yml',
-            '/app/assets/builds/*',
-            '!/app/assets/builds/.keep',
-            '/node_modules'
-        ];
-        fs.writeFileSync(path.join(workspaceRoot, '.gitignore'), gitignore.join('\n'));
+        require('../libs/configs').writeGitignoreFile(path.join(submodulesDir, submoduleNameDashcase));
 
         // create all these folders in the submodule root, if they not already exist and in this case also add a .keep empty file: db/migrate app/models/concerns/api app/models/concerns/rails_admin config/initializers config/locales
         const dbMigrateDir = path.join(submodulesDir, submoduleNameDashcase, 'db', 'migrate');
@@ -310,25 +121,20 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         const appViewsRailsAdminMainDir = path.join(submodulesDir, submoduleNameDashcase, 'app', 'views', 'rails_admin', 'main');
         const dirs = [libMemberActionsDir, libCollectionActionsDir, appViewsRailsAdminMainDir, appAssetsStylesheetsDir, appAssetsJavascriptsDir, libRootActionsDir, dbMigrateDir, appModelsConcernsApiDir, appModelsConcernsRailsAdminDir, configInitializersDir, configLocalesDir];
         dirs.forEach((dir) => {
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-                fs.writeFileSync(path.join(dir, '.keep'), '');
-            }
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, '.keep'), '');
         });
 
         // In the config/initializers add, only if it's not already existing, a file named after_initialize.rb with the following content:
-        const afterInitializeFile = path.join(configInitializersDir, 'after_initialize.rb');
-        if (!fs.existsSync(afterInitializeFile)) {
-            const afterInitializeTxt = [
-                "Rails.application.configure do",
-                "    config.after_initialize do",
-                "        # For example, it can be used to load a root action defined in lib, for example:",
-                "        # require 'root_actions/tcp_debug'",
-                "    end",
-                "end"
-            ].join('\n');
-            fs.writeFileSync(afterInitializeFile, afterInitializeTxt);
-        }
+        const afterInitializeTxt = [
+            "Rails.application.configure do",
+            "    config.after_initialize do",
+            "        # For example, it can be used to load a root action defined in lib, for example:",
+            "        # require 'root_actions/tcp_debug'",
+            "    end",
+            "end"
+        ];
+        require('../libs/configs').writeTextFile(configInitializersDir, 'after_initialize.rb', afterInitializeTxt);
 
         // In the config/initializers, add a file named add_to_db_migration.rb with the following content:
         const addToDbMigrationFile = path.join(configInitializersDir, 'add_to_db_migration.rb');
@@ -336,24 +142,21 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
         fs.writeFileSync(addToDbMigrationFile, addToDbMigrationTxt);
 
         // In the config/initializers, add a file named assets.rb with the following content:
-        const assetsFile = path.join(configInitializersDir, 'assets.rb');
         const assetsTxt = [
             "Rails.application.config.assets.precompile += %w(",
             "    # For Example, in the case there's a root action called tcp_debug, add the following lines to include css and javascripts for auto loading:",
             "    # main_tcp_debug.js",
             "    # main_tcp_debug.css",
             ")"
-        ].join('\n');
-        fs.writeFileSync(assetsFile, assetsTxt);
+        ];
+        require('../libs/configs').writeTextFile(configInitializersDir, 'assets.rb', assetsTxt);
 
         // Create a db folder in the submodule root, if it not already exist and in this case also add a seeds.rb file with the following content: puts "Seeding from Thecore TCP Debug"
         const dbDir = path.join(submodulesDir, submoduleNameDashcase, 'db');
-        if (!fs.existsSync(dbDir)) {
-            fs.mkdirSync(dbDir, { recursive: true });
-            const seedsFile = path.join(dbDir, 'seeds.rb');
-            const seedsTxt = `puts "Seeding from ${submoduleName}"`;
-            fs.writeFileSync(seedsFile, seedsTxt);
-        }
+        fs.mkdirSync(dbDir, { recursive: true });
+        const seedsFile = path.join(dbDir, 'seeds.rb');
+        const seedsTxt = `puts "Seeding from ${submoduleName}"`;
+        fs.writeFileSync(seedsFile, seedsTxt);
 
         // Open the submodule version.rb file and replace the VERSION constant with the value 3.0.1
         const versionFile = path.join(submodulesDir, submoduleNameDashcase, 'lib', submoduleNameDashcase, 'version.rb');
@@ -363,59 +166,22 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
 
         // In the config/locales add, only if it's not already existing, a file named en.yml and another file named it.yml with the en: and it: keys respectively
         // and below them the admin -> actions key with the Dashcase version of the submodule name as value
-        const enFile = path.join(configLocalesDir, 'en.yml');
-        const itFile = path.join(configLocalesDir, 'it.yml');
-        if (!fs.existsSync(enFile)) {
-            const enObject = {
-                en: {
-                    admin: {
-                        actions: {
-                            [submoduleNameDashcase]: {
-                                menu: submoduleNameDashcase,
-                                title: submoduleNameDashcase,
-                                breadcrumb: submoduleNameDashcase
-                            }
-                        }
+        const commonObject = {
+            admin: {
+                actions: {
+                    [submoduleNameDashcase]: {
+                        menu: submoduleNameDashcase,
+                        title: submoduleNameDashcase,
+                        breadcrumb: submoduleNameDashcase
                     }
                 }
-            };
-            // Transform the object to yaml and write it to the file
-            const yaml = require('js-yaml');
-            const enYaml = yaml.dump(enObject, {
-                'styles': {
-                    '!!null': 'canonical' // dump null as ~
-                },
-                'sortKeys': false        // sort object keys
-            });
-            fs.writeFileSync(enFile, enYaml);
-            // Write the same object to the it.yml file, replacing en with it
-            const itObject = {
-                it: {
-                    admin: {
-                        actions: {
-                            [submoduleNameDashcase]: {
-                                menu: submoduleNameDashcase,
-                                title: submoduleNameDashcase,
-                                breadcrumb: submoduleNameDashcase
-                            }
-                        }
-                    }
-                }
-            };
-            const itYaml = yaml.dump(itObject, {
-                'styles': {
-                    '!!null': 'canonical' // dump null as ~
-                },
-                'sortKeys': false        // sort object keys
-            });
-
-            fs.writeFileSync(itFile, itYaml);
-
+            }
         }
+        require('../libs/configs').writeYAMLFile(configLocalesDir, 'en.yml', { en: commonObject });
+        require('../libs/configs').writeYAMLFile(configLocalesDir, 'it.yml', { it: commonObject });
 
         // Add to the config/initializers an abilities.rb file with the following content, the class name 
         // should be the camelcase version of the submodule name, i.e. ThecoreUiRailsAdmin:
-        const abilitiesFile = path.join(configInitializersDir, 'abilities.rb');
         const abilitiesTxt = [
             "module Abilities",
             `    class ${submoduleName.replace(/ /g, '_').replace(/-/g, '_').replace(/\b\w/g, l => l.toUpperCase())}`,
@@ -430,11 +196,10 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
             "        end",
             "    end",
             "end"
-        ].join('\n');
-        fs.writeFileSync(abilitiesFile, abilitiesTxt);
+        ];
+        require('../libs/configs').writeTextFile(configInitializersDir, 'abilities.rb', abilitiesTxt);
 
         // Add a github workflow action called gempush.yml with the following content:
-        const gempushFile = path.join(submodulesDir, submoduleNameDashcase, '.github', 'workflows', 'gempush.yml');
         const gempushObject = {
             name: 'Ruby Gem',
             on: 'push',
@@ -485,18 +250,9 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
                 }
             }
         };
-        // Transform the object to yaml and write it to the file
-        const yaml = require('js-yaml');
-        const gempushYaml = yaml.dump(gempushObject, {
-            'styles': {
-                '!!null': 'canonical' // dump null as ~
-            },
-            'sortKeys': false        // sort object keys
-        });
-        fs.writeFileSync(gempushFile, gempushYaml);
+        require('../libs/configs').writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase, '.github', 'workflows'), 'gempush.yml', gempushObject);
 
         // Also add a gitlab ci file suitable for building using the thecore devcontainer, it's content thus must be:
-        const gitlabCiFile = path.join(submodulesDir, submoduleNameDashcase, '.gitlab-ci.yml');
         const gitlabCiOject = {
             image: 'gabrieletassoni/vscode-devcontainers-thecore:3',
             variables: {
@@ -526,14 +282,7 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
                 ]
             }
         };
-        // Transform the object to yaml and write it to the file
-        const gitlabCiYaml = yaml.dump(gitlabCiOject, {
-            'styles': {
-                '!!null': 'canonical' // dump null as ~
-            },
-            'sortKeys': false        // sort object keys
-        });
-        fs.writeFileSync(gitlabCiFile, gitlabCiYaml);
+        require('../libs/configs').writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase), '.gitlab-ci.yml', gitlabCiOject);
 
         // add Thecore dependecies to the submodule Gemfile and gemspec, the two Thecore gems to add are: model_driven_api and thecore_ui_rails_admin both at version ~3.0
         const gemfile = path.join(submodulesDir, submoduleNameDashcase, 'Gemfile');

@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
 
 // The code you place here will be executed every time your command is executed
 /**
@@ -11,30 +13,11 @@ function addRootAction(context) {
     vscode.window.showInformationMessage('Adding a root Action to the current ATOM.');
 
     // Check if we are inside a workspace
-    if (vscode.workspace.workspaceFolders === undefined) {
-        vscode.window.showErrorMessage('No workspace is open. Please open a workspace and try again.');
-        return;
-    }
+    if (!require('../libs/check').workspacePresence()) { return; }
 
-    // Check if the workspace root is a Thecore 3 app
-    const fs = require('fs');
-    const path = require('path');
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const appDir = path.join(workspaceRoot, 'app');
-    const binDir = path.join(workspaceRoot, 'bin');
-    const configDir = path.join(workspaceRoot, 'config');
-    const dbDir = path.join(workspaceRoot, 'db');
-    const libDir = path.join(workspaceRoot, 'lib');
-    const logDir = path.join(workspaceRoot, 'log');
-    const publicDir = path.join(workspaceRoot, 'public');
-    const storageDir = path.join(workspaceRoot, 'storage');
-    const testDir = path.join(workspaceRoot, 'test');
-    const tmpDir = path.join(workspaceRoot, 'tmp');
-    const vendorDir = path.join(workspaceRoot, 'vendor');
-    if (!fs.existsSync(appDir) || !fs.existsSync(binDir) || !fs.existsSync(configDir) || !fs.existsSync(dbDir) || !fs.existsSync(libDir) || !fs.existsSync(logDir) || !fs.existsSync(publicDir) || !fs.existsSync(storageDir) || !fs.existsSync(testDir) || !fs.existsSync(tmpDir) || !fs.existsSync(vendorDir)) {
-        vscode.window.showErrorMessage('The workspace root is not a Thecore 3 app. Please open a Thecore 3 app and try again.');
-        return;
-    }
+    // Check if the workspace root is a Ruby on Rails app
+    const rorDirs = require('../libs/check').rubyOnRailsAppValidity();
+    if (!rorDirs) { return; }
 
     // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/root_actions folder
     const atomDir = path.dirname(context.fsPath);

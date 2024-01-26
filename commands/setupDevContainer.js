@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
 
 // The code you place here will be executed every time your command is executed
 /**
@@ -10,13 +12,8 @@ function setupDevContainer() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
 
-    const fs = require('fs');
-    const path = require('path');
-    // Before checking for devcontainer directory, we need to check if the workspace is open
-    if (vscode.workspace.workspaceFolders === undefined) {
-        vscode.window.showErrorMessage('No workspace is open. Please open a workspace and try again.');
-        return;
-    }
+    // Call the checkWorkspace function from the checks.js file, if it's not ok, return
+    if (!require('../libs/check').workspacePresence()) { return; }
 
     // Checking if the .devcontainer directory is present in the root of the vs code workspace and creating it if not
     const devcontainerDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer');
@@ -29,9 +26,7 @@ function setupDevContainer() {
             placeHolder: 'Enter the name of the devcontainer, i.e. Thecore BE',
             value: 'thecore-devcontainer'
         }).then((devcontainerName) => {
-            // Creating the devcontainer.json file inside the .devcontainer directory
-            const devcontainerFile = path.join(devcontainerDir, 'devcontainer.json');
-            // Filling it with the basic configuration
+            // Writing the devcontainer.json file
             const devcontainerConfig = {
                 "name": devcontainerName,
                 "dockerComposeFile": "docker-compose.yml",
@@ -71,13 +66,9 @@ function setupDevContainer() {
                 },
                 "remoteUser": "vscode"
             }
-            // Writing the file
-            fs.writeFileSync(devcontainerFile, JSON.stringify(devcontainerConfig, null, 4));
-            vscode.window.showInformationMessage('devcontainer.json file created successfully.');
+            require('../libs/configs').writeJSONFile(devcontainerDir, 'devcontainer.json', devcontainerConfig);
 
             // Creating the docker-compose.yml file inside the .devcontainer directory
-            const dockerComposeFile = path.join(devcontainerDir, 'docker-compose.yml');
-            // Filling it with the basic configuration
             const dockerComposeConfig = {
                 "version": "3.9",
                 "services": {
@@ -133,39 +124,15 @@ function setupDevContainer() {
                     "bundle": null
                 }
             }
-            // Writing the file
-            // Transforming the JSON to YAML and write it to the file
-            const yaml = require('js-yaml');
-            const dockerComposeConfigYML = yaml.dump(dockerComposeConfig, {
-                'styles': {
-                    '!!null': 'canonical' // dump null as ~
-                },
-                'sortKeys': false        // sort object keys
-            });
-
-
-            fs.writeFileSync(dockerComposeFile, dockerComposeConfigYML);
-            vscode.window.showInformationMessage('docker-compose.yml file created successfully.');
+            require('../libs/configs').writeYAMLFile(devcontainerDir, 'docker-compose.yml', dockerComposeConfig);
 
             // Creating the Dockerfile file inside the .devcontainer directory
-            const dockerFile = path.join(devcontainerDir, 'Dockerfile');
-            // Filling it with the basic configuration
-            const dockerConfig = "FROM gabrieletassoni/vscode-devcontainers-thecore:3";
-            // Writing the file
-            fs.writeFileSync(dockerFile, dockerConfig);
-            vscode.window.showInformationMessage('Dockerfile file created successfully.');
+            require('../libs/configs').writeTextFile(devcontainerDir, 'Dockerfile', "FROM gabrieletassoni/vscode-devcontainers-thecore:3");
 
             // Creating the create-db-user.sql file inside the .devcontainer directory
-            const createDbUserFile = path.join(devcontainerDir, 'create-db-user.sql');
-            // Filling it with the basic configuration
-            const createDbUserConfig = "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;";
-            // Writing the file
-            fs.writeFileSync(createDbUserFile, createDbUserConfig);
-            vscode.window.showInformationMessage('create-db-user.sql file created successfully.');
+            require('../libs/configs').writeTextFile(devcontainerDir, 'create-db-user.sql', "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;");
 
             // Create the backend.code-workspace file
-            const workspaceFile = path.join(devcontainerDir, 'backend.code-workspace');
-            // Filling it with the basic configuration
             const workspaceConfig = {
                 "folders": [
                     {
@@ -178,9 +145,7 @@ function setupDevContainer() {
                     }
                 }
             };
-            // Writing the file
-            fs.writeFileSync(workspaceFile, JSON.stringify(workspaceConfig, null, 4));
-            vscode.window.showInformationMessage('backend.code-workspace file created successfully.');
+            require('../libs/configs').writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig);
         });
     } else {
         vscode.window.showWarningMessage('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
