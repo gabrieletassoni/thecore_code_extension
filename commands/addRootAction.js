@@ -5,9 +5,6 @@ const fs = require('fs');
 const path = require('path');
 
 // The code you place here will be executed every time your command is executed
-/**
- * Creates a new Thecore 3 app in the current workspace.
- */
 function perform(context) {
     // Display a message box to the user
     vscode.window.showInformationMessage('Adding a root Action to the current ATOM.');
