@@ -112,5 +112,8 @@
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
     "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
   }
 }
