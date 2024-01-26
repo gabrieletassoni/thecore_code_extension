@@ -3,6 +3,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const { workspaceExixtence } = require('../libs/check');
 
 // The code you place here will be executed every time your command is executed
 /**
@@ -12,14 +13,19 @@ function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
 
+    // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
+    const outputChannel = vscode.window.createOutputChannel('Thecore: Setup Devcontainer');
+    outputChannel.show();
+    outputChannel.appendLine('Setting up a Thecore 3 Devcontainer.');
+
     // Call the checkWorkspace function from the checks.js file, if it's not ok, return
-    if (!require('../libs/check').workspacePresence()) { return; }
+    if (!workspaceExixtence()) { return; }
 
     // Checking if the .devcontainer directory is present in the root of the vs code workspace and creating it if not
     const devcontainerDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer');
     if (!fs.existsSync(devcontainerDir)) {
         fs.mkdirSync(devcontainerDir);
-        vscode.window.showInformationMessage('.devcontainer directory not exists, I created it right now.');
+        outputChannel.appendLine('.devcontainer directory not exists, creating it right now.');
 
         // Asking the user for the name of the devcontainer
         vscode.window.showInputBox({
@@ -148,6 +154,7 @@ function perform() {
             require('../libs/configs').writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig);
         });
     } else {
+        outputChannel.appendLine('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
         vscode.window.showWarningMessage('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
     }
 }

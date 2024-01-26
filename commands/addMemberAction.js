@@ -9,12 +9,18 @@ function perform(context) {
     // Display a message box to the user
     vscode.window.showInformationMessage('Adding a member Action to the current ATOM.');
 
+    // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
+    const outputChannel = vscode.window.createOutputChannel('Thecore: Add Member Action');
+    outputChannel.show();
+    outputChannel.appendLine('Adding a member Action to the current ATOM.');
+
     // Check if we are inside a workspace
     if (!require('../libs/check').workspacePresence()) { return; }
 
     // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/member_actions folder
     const atomDir = path.dirname(context.fsPath);
     if (!fs.existsSync(atomDir)) {
+        outputChannel.appendLine('The selected folder does not exist. Please open a Thecore 3 app and try again.');
         vscode.window.showErrorMessage('The selected folder does not exist. Please open a Thecore 3 app and try again.');
         return;
     }
@@ -22,6 +28,7 @@ function perform(context) {
     const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
     const atommemberActionsDir = path.join(atomDir, 'lib', 'member_actions');
     if (!fs.existsSync(atomGemspec) || !fs.existsSync(atommemberActionsDir)) {
+        outputChannel.appendLine('The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.');
         vscode.window.showErrorMessage('The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.');
         return;
     }
@@ -30,12 +37,14 @@ function perform(context) {
     const memberActionName = vscode.window.showInputBox({ prompt: 'Please enter the name of the member Action to add.' });
     if (!memberActionName) { return; }
     if (!memberActionName.match(/^[a-z0-9_]+$/)) {
+        outputChannel.appendLine('The member Action name must be snakecase. Please try again.');
         vscode.window.showErrorMessage('The member Action name must be snakecase. Please try again.');
         return;
     }
     // Check if the member Action already exists
     const memberActionFile = path.join(atommemberActionsDir, `${memberActionName}.rb`);
     if (fs.existsSync(memberActionFile)) {
+        outputChannel.appendLine(`The member Action ${memberActionName} already exists. Please try again.`);
         vscode.window.showErrorMessage(`The member Action ${memberActionName} already exists. Please try again.`);
         return;
     }
@@ -63,6 +72,7 @@ function perform(context) {
         `end`,
     ].join('\n');
     fs.writeFileSync(memberActionFile, memberActionContent);
+    outputChannel.appendLine(`The member Action file ${memberActionFile} has been created successfully.`);
 
     // Using the same logic, add a file in app/views/rails_admin/main with the following content, replacing tcp_debug with the member Action name and creating the folders if they do not exists:
     const mainViewFile = path.join(atomDir, "app", 'views', 'rails_admin', 'main', `${memberActionName}.html.erb`);
@@ -81,6 +91,7 @@ function perform(context) {
     ].join('\n');
     fs.mkdirSync(path.dirname(mainViewFile), { recursive: true });
     fs.writeFileSync(mainViewFile, mainViewContent);
+    outputChannel.appendLine(`The member Action view file ${mainViewFile} has been created successfully.`);
 
     // Add the member Action to the rails_admin initializer, if not already present, into after_initialize.rb file
     // Below the `config.after_initialize do` line add the `require 'member_actions/tcp_debug'` line, obviously replacing tcp_debug with the member Action name
@@ -91,6 +102,9 @@ function perform(context) {
         const afterInitializeIndex = afterInitializeLines.findIndex(line => line.includes('config.after_initialize do'));
         afterInitializeLines.splice(afterInitializeIndex + 1, 0, `        require 'member_actions/${memberActionName}'`);
         fs.writeFileSync(afterInitializeFile, afterInitializeLines.join('\n'));
+        outputChannel.appendLine(`The member Action require line has been added to the ${afterInitializeFile} file successfully.`);
+    } else {
+        outputChannel.appendLine(`The member Action require line is already present in the ${afterInitializeFile} file.`);
     }
 
     // Using the same logic, add to the config/initializers/assets.rb file the following line, replacing tcp_debug with the member Action name
@@ -102,7 +116,14 @@ function perform(context) {
         const assetsIndex = assetsLines.findIndex(line => line.includes('Rails.application.config.assets.precompile += %w( rails_admin/rails_admin.js rails_admin/rails_admin.css )'));
         assetsLines.splice(assetsIndex + 1, 0, `Rails.application.config.assets.precompile += %w( member_actions/main_${memberActionName}.js member_actions/main_${memberActionName}.css )`);
         fs.writeFileSync(assetsFile, assetsLines.join('\n'));
+        outputChannel.appendLine(`The member Action assets line has been added to the ${assetsFile} file successfully.`);
+    } else {
+        outputChannel.appendLine(`The member Action assets line is already present in the ${assetsFile} file.`);
     }
+
+    // Success message
+    outputChannel.appendLine(`The member Action ${memberActionName} has been added successfully.`);
+    vscode.window.showInformationMessage(`The member Action ${memberActionName} has been added successfully.`);
 }
 
 // Make the following code available to the extension.js file

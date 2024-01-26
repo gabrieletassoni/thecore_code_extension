@@ -3,25 +3,32 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const { execShell } = require('../libs/os');
+const { workspaceExixtence, rubyOnRailsAppValidity, fileExistence } = require('../libs/check');
 
 // The code you place here will be executed every time your command is executed
 /**
  * Releases Thecore 3 App.
  */
-function perform() {
+async function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Releasing this Thecore 3 App.');
 
+    // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
+    const outputChannel = vscode.window.createOutputChannel('Thecore: Release App');
+    outputChannel.show();
+    outputChannel.appendLine('Releasing this Thecore 3 App.');
+
     // Check if we are inside a workspace
-    if (!require('../libs/check').workspacePresence()) { return; }
+    if (!workspaceExixtence(outputChannel)) { return; }
 
     // Check if the workspace root is a Ruby on Rails app
-    const rorDirs = require('../libs/check').rubyOnRailsAppValidity();
+    const rorDirs = rubyOnRailsAppValidity(false, outputChannel);
     if (!rorDirs) { return; }
 
     // Check if `./vendor/custombuilds/` exists
     const custombuildsDir = path.join(rorDirs.vendorDir, 'custombuilds');
-    if (!require('../libs/check').fileExists(custombuildsDir)) { return; }
+    if (!fileExistence(custombuildsDir)) { return; }
     // Find all the `Dockerfile` files inside `./vendor/custombuilds/`
     const dockerfiles = fs.readdirSync(custombuildsDir).filter(file => file === 'Dockerfile');
     // Run the `docker build` command for each `Dockerfile` file
@@ -34,20 +41,20 @@ function perform() {
         const gemfile = path.join(custombuildsDir, dockerfile.replace('Dockerfile', 'Gemfile'));
         if (fs.existsSync(precompileScript)) {
             // Run the `pre-compile.sh` script
-            if (!require('../libs/os').execOrReturnFalse(`chmod +x ${precompileScript} && source ${precompileScript} && bundle update --gemfile ${gemfile}`)) { return; };
+            if (!await execShell(`chmod +x ${precompileScript} && source ${precompileScript} && bundle update --gemfile ${gemfile}`, custombuildsDir, outputChannel)) { return; };
         } else {
             // Run the `bundle install` command
-            if (!require('../libs/os').execOrReturnFalse(`bundle update --gemfile ${gemfile}`)) { return; };
+            if (!await execShell(`bundle update --gemfile ${gemfile}`, custombuildsDir, outputChannel)) { return; };
         }
         
         // Be sure to be aligned with remote repository, fecching the latest changes and tags
-        if (!require('../libs/os').execOrReturnFalse(`git pull && git fetch --all --tags --prune && git add . -A`)) { return; };
+        if (!await execShell(`git pull && git fetch --all --tags --prune && git add . -A`, custombuildsDir, outputChannel)) { return; };
 
         // Get the version from the VERSION file present in the root of the workspace
         const versionFile = path.join(rorDirs.workspaceRoot, 'VERSION');
         let version = fs.readFileSync(versionFile, 'utf8');
         // Print an informative message about the version that is going to be released
-        vscode.window.showInformationMessage(`Releasing version ${version} of the app.`);
+        outputChannel.appendLine(`Releasing version ${version} of the app.`);
         // Ask The the user if he wants to increment the Major, Minor or Patch version
         vscode.window.showQuickPick(['Major', 'Minor', 'Patch']).then((versionIncrement) => {
             // Increment the version in the version variable accordingly to the selected Pick
@@ -76,14 +83,16 @@ function perform() {
                 value: 'Release'
             }).then((commitMessage) => {
                 // Commit the changes
-                if (!require('../libs/os').execOrReturnFalse(`git commit -a -m "${commitMessage}"`)) { return; }
+                if (!await execShell(`git commit -a -m "${commitMessage}"`, custombuildsDir, outputChannel)) { return; }
                 // Tag the commit with the version
-                if (!require('../libs/os').execOrReturnFalse(`git tag -a ${version} -m "${commitMessage}"`)) { return; }
+                if (!await execShell(`git tag -a ${version} -m "${commitMessage}"`, custombuildsDir, outputChannel)) { return; }
                 // Push the commit and the tag to the remote repository
-                if (!require('../libs/os').execOrReturnFalse(`git push && git push --tags`)) { return; }
+                if (!await execShell(`git push && git push --tags`, custombuildsDir, outputChannel)) { return; }
             });
         });
     });
+    outputChannel.appendLine('Thecore 3 App released successfully.');
+    vscode.window.showInformationMessage('Thecore 3 App released successfully.');
 }
 
 // Make the following code available to the extension.js file
