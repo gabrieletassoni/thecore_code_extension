@@ -9,7 +9,8 @@
 		"vscode": {
 			"extensions": [
 				"dbaeumer.vscode-eslint",
-				"ms-vscode.extension-test-runner"
+				"ms-vscode.extension-test-runner",
+				"github.vscode-github-actions"
 			]
 		}
 	}
