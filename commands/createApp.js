@@ -8,7 +8,7 @@ const path = require('path');
 /**
  * Creates a new Thecore 3 app in the current workspace.
  */
-function createApp() {
+function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Creating a Thecore 3 App.');
 
@@ -188,5 +188,5 @@ function createApp() {
 
 // Make the following code available to the extension.js file
 module.exports = {
-    createApp,
+    perform,
 }

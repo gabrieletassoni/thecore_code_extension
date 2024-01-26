@@ -24,22 +24,37 @@ function activate(context) {
 	// The commandId parameter must match the command field in package.json
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.setupDevcontainer', function () {
 		// Call the business logic which is present into the commands directory in the setupDevContainer.js file
-		require('./commands/setupDevContainer').setupDevContainer();
+		require('./commands/setupDevContainer').perform();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.createApp', function () {
 		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/createApp').createApp();
+		require('./commands/createApp').perform();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
 		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/releaseApp').releaseApp();
+		require('./commands/releaseApp').perform();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.createATOM', function () {
 		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/createATOM').createATOM();
+		require('./commands/createATOM').perform();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addRootAction', function () {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addRootAction').perform();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMemberAction', function () {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addMemberAction').perform();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addCollectionAction', function () {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addCollectionAction').perform();
 	}));
 }
 

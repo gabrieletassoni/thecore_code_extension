@@ -6,7 +6,7 @@ const path = require('path');
 /**
  * Creates a Thecore 3 ATOM.
  */
-function createATOM() {
+function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Creating a Thecore 3 ATOM.');
 
@@ -306,5 +306,5 @@ function createRailsEngine(submoduleName, submoduleNameDashcase, summary, descri
 
 // Make the following code available to the extension.js file
 module.exports = {
-    createATOM,
+    perform,
 }

@@ -1,8 +1,11 @@
-const assert = require('assert');
 const vscode = require('vscode');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const jest = require('jest');
+const { createApp } = require('../commands/createApp');
+const assert = require('assert');
+const { expect } = require('jest');
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -39,24 +42,26 @@ suite('Extension Test Suite', () => {
 		createApp();
 
 		// Assert that the vscode.window.showInformationMessage method was called with the correct message
-		expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Creating a Thecore 3 App.');
+		assert(vscode.window.showInformationMessage).toHaveBeenCalledWith('Creating a Thecore 3 App.');
 
 		// Assert that the vscode.window.showErrorMessage method was not called
-		expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+		assert(vscode.window.showErrorMessage).not.toHaveBeenCalled();
 
 		// Assert that the child_process.exec method was called with the correct commands
-		expect(exec).toHaveBeenCalledWith('ruby -v', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails -v', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('bundle -v', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails new . --database=postgresql --asset-pipeline=sprockets --skip-git', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('git init', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('git checkout -b main', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('git add .', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('git commit -m "Initial commit"', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('git branch -M main', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('ruby -v', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('rails -v', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('bundle -v', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('rails new . --database=postgresql --asset-pipeline=sprockets --skip-git', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('git init', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('git checkout -b main', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('git add .', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('git commit -m "Initial commit"', expect.any(Function));
+		assert(exec).toHaveBeenCalledWith('git branch -M main', expect.any(Function));
 
 		// Assert that the fs.existsSync method was called with the correct paths
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'app'));
+		const workspaceRoot = '/path/to/workspace'; // Replace '/path/to/workspace' with the actual workspace root path
+
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'bin'));
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'config'));
 		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'db'));

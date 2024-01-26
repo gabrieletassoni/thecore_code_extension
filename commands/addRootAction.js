@@ -8,7 +8,7 @@ const path = require('path');
 /**
  * Creates a new Thecore 3 app in the current workspace.
  */
-function addRootAction(context) {
+function perform(context) {
     // Display a message box to the user
     vscode.window.showInformationMessage('Adding a root Action to the current ATOM.');
 
@@ -147,5 +147,5 @@ function addRootAction(context) {
 
 // Make the following code available to the extension.js file
 module.exports = {
-    addRootAction,
+    perform,
 }

@@ -1,7 +1,10 @@
-const assert = require('assert');
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
+const { expect } = require('jest');
+const { setupDevContainer } = require('../commands/setupDevContainer');
+const jest = require('jest');
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -26,7 +29,6 @@ suite('Extension Test Suite', () => {
         fs.writeFileSync = jest.fn();
 
         // Mock the yaml.dump method
-        const yaml = require('js-yaml');
         yaml.dump = jest.fn().mockReturnValue('docker-compose-config-yml');
 
         // Call the setupDevContainer function

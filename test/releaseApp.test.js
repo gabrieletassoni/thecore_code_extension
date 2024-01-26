@@ -3,6 +3,9 @@ const vscode = require('vscode');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const expect = require('expect');
+const { releaseApp } = require('../commands/releaseApp');
+const jest = require('jest');
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -38,20 +41,20 @@ suite('Extension Test Suite', () => {
 		fs.readFileSync.mockReturnValue('1.0.0');
 
 		// Mock the fs.writeFileSync method
-		fs.writeFileSync.mockImplementation(() => {});
-
 		// Call the releaseApp function
 		releaseApp();
 
 		// Assert that the vscode.window.showInformationMessage method was called with the correct message
-		expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Releasing this Thecore 3 App.');
+		assert.expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Releasing this Thecore 3 App.');
 
 		// Assert that the vscode.window.showErrorMessage method was not called
-		expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+		assert.expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
 
 		// Assert that the child_process.exec method was called with the correct commands
-		expect(exec).toHaveBeenCalledWith('git pull && git fetch --all --tags --prune && git add . -A', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('chmod +x ./vendor/custombuilds/pre-compile.sh && source ./vendor/custombuilds/pre-compile.sh', expect.any(Function));
+		const workspaceRoot = '/path/to/workspace'; // Replace '/path/to/workspace' with the actual workspace root path
+
+		assert.expect(exec).toHaveBeenCalledWith('git pull && git fetch --all --tags --prune && git add . -A', expect.any(Function));
+		assert.expect(exec).toHaveBeenCalledWith('chmod +x ./vendor/custombuilds/pre-compile.sh && source ./vendor/custombuilds/pre-compile.sh', expect.any(Function));
 		expect(exec).toHaveBeenCalledWith('bundle update --gemfile ./vendor/custombuilds/Gemfile', expect.any(Function));
 		expect(exec).toHaveBeenCalledWith('git commit -a -m "Release"', expect.any(Function));
 		expect(exec).toHaveBeenCalledWith('git tag -a 1.0.0 -m "Release"', expect.any(Function));

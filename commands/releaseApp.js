@@ -8,7 +8,7 @@ const path = require('path');
 /**
  * Releases Thecore 3 App.
  */
-function releaseApp() {
+function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Releasing this Thecore 3 App.');
 
@@ -88,5 +88,5 @@ function releaseApp() {
 
 // Make the following code available to the extension.js file
 module.exports = {
-    releaseApp,
+    perform,
 }

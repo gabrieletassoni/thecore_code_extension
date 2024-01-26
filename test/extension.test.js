@@ -1,4 +1,3 @@
-const assert = require('assert');
 const vscode = require('vscode');
 const myExtension = require('../extension');
 

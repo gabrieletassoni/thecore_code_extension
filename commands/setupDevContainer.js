@@ -8,7 +8,7 @@ const path = require('path');
 /**
  * Sets up a Thecore 3 Devcontainer.
  */
-function setupDevContainer() {
+function perform() {
     // Display a message box to the user
     vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
 
@@ -154,5 +154,5 @@ function setupDevContainer() {
 
 // Make the following code available to the extension.js file
 module.exports = {
-    setupDevContainer,
+    perform,
 }
