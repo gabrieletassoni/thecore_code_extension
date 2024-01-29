@@ -17,13 +17,14 @@ const execShell = (cmd, workingDirectory, outputChannel) =>
         }, 800);
 
         exec(cmd, { cwd: workingDirectory }, (err, out) => {
+            outputChannel.appendLine("\n Command finished, collecting output:");
             clearInterval(interval);
 
             if (err) {
-                outputChannel.appendLine(err.stdout.toString());
+                outputChannel.appendLine(` ❌ ${err}`);
                 return reject(err);
             }
-            outputChannel.appendLine(out.toString());
+            outputChannel.appendLine(` ✅ ${out}`);
             return resolve(out);
         });
     });

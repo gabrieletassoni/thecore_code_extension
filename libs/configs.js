@@ -4,15 +4,17 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 
-function writeJSONFile(dir, jsonFile, jsonContentObject) {
+function writeJSONFile(dir, jsonFile, jsonContentObject, outputChannel) {
+    outputChannel.appendLine(`📝 Creating JSON file ${jsonFile} inside ${dir}.`);
     // Creating the json file inside the directory
     const targetFile = path.join(dir, jsonFile);
     // Writing the file
     fs.writeFileSync(targetFile, JSON.stringify(jsonContentObject, null, 4));
-    vscode.window.showInformationMessage(`${jsonFile} file created successfully.`);
+    outputChannel.appendLine(` - JSON file ${jsonFile} created successfully.`);
 }
 
-function writeYAMLFile(dir, yamlFile, yamlContentObject) {
+function writeYAMLFile(dir, yamlFile, yamlContentObject, outputChannel) {
+    outputChannel.appendLine(`📝 Creating YAML file ${yamlFile} inside ${dir}.`);
     // Creating the yaml file inside the directory
     const targetFile = path.join(dir, yamlFile);
     // Writing the file
@@ -24,10 +26,11 @@ function writeYAMLFile(dir, yamlFile, yamlContentObject) {
         'sortKeys': false        // sort object keys
     });
     fs.writeFileSync(targetFile, yamlContent);
-    vscode.window.showInformationMessage(`${yamlFile} file created successfully.`);
+    outputChannel.appendLine(` - YAML file ${yamlFile} created successfully.`);
 }
 
-function writeTextFile(dir, textFile, textContent) {
+function writeTextFile(dir, textFile, textContent, outputChannel) {
+    outputChannel.appendLine(`📝 Creating text file ${textFile} inside ${dir}.`);
     // Creating the text file inside the directory
     const targetFile = path.join(dir, textFile);
     // Writing the file
@@ -36,10 +39,10 @@ function writeTextFile(dir, textFile, textContent) {
         textContent = textContent.join('\n');
     }
     fs.writeFileSync(targetFile, textContent);
-    vscode.window.showInformationMessage(`${textFile} file created successfully.`);
+    outputChannel.appendLine(` - Text file ${textFile} created successfully.`);
 }
 
-function createGitignoreFile(dir) {
+function createGitignoreFile(dir, outputChannel) {
     // Writing the file
     const textContent = [
         '# Created by https://www.toptal.com/developers/gitignore/api/osx,macos,ruby,linux,rails,windows',
@@ -208,7 +211,7 @@ function createGitignoreFile(dir) {
         '!/app/assets/builds/.keep',
         '/node_modules'
     ];
-    writeTextFile(dir, '.gitignore', textContent);
+    writeTextFile(dir, '.gitignore', textContent, outputChannel);
 }
 
 // Make the following code available to the extension.js file
