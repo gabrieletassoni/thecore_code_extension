@@ -87,7 +87,6 @@ function perform() {
                             "..:/workspaces/project/backend:cached",
                             "tmp:/workspaces/project/backend/tmp",
                             "bundle:/workspaces/project/backend/vendor/bundle",
-                            "${HOME}/.bundle/config:/home/vscode/.bundle/config",
                             "/var/run/docker.sock:/var/run/docker.sock"
                         ],
                         "command": "sleep infinity",
