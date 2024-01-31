@@ -6,6 +6,27 @@ const path = require('path');
 const { writeTextFile } = require('../libs/configs');
 const { mkDirP } = require('../libs/os');
 
+function appendYmlContent(ymlFile, ymlContent, rootActionName, rootActionNameTitleCase) {
+    if (!ymlContent.includes(`admin:`)) {
+        fs.appendFileSync(ymlFile, `\n  admin:`);
+    }
+    if (!ymlContent.includes(`actions:`)) {
+        fs.appendFileSync(ymlFile, `\n    actions:`);
+    }
+    if (!ymlContent.includes(`${rootActionName}:`)) {
+        fs.appendFileSync(ymlFile, `\n      ${rootActionName}:`);
+    }
+    if (!ymlContent.includes(`menu:`)) {
+        fs.appendFileSync(ymlFile, `\n        menu: ${rootActionNameTitleCase}`);
+    }
+    if (!ymlContent.includes(`title:`)) {
+        fs.appendFileSync(ymlFile, `\n        title: ${rootActionNameTitleCase}`);
+    }
+    if (!ymlContent.includes(`breadcrumb:`)) {
+        fs.appendFileSync(ymlFile, `\n        breadcrumb: ${rootActionNameTitleCase}`);
+    }
+}
+
 // The code you place here will be executed every time your command is executed
 async function perform(atomDir) {
     if (!atomDir) {
@@ -225,6 +246,17 @@ async function perform(atomDir) {
             `});`,
         ];
         writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts'), `main_${rootActionName}.js`, mainJsContent, outputChannel);
+
+        // Create a title case verson of the snake case rootActionName
+        const rootActionNameTitleCase = rootActionName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+        const enYmlFile = path.join(atomDir, "config", 'locales', 'en.yml');
+        const enYmlContent = fs.readFileSync(enYmlFile).toString();
+        appendYmlContent(enYmlFile, enYmlContent, rootActionName, rootActionNameTitleCase);
+
+        const itYmlFile = path.join(atomDir, "config", 'locales', 'it.yml');
+        const itYmlContent = fs.readFileSync(itYmlFile).toString();
+        appendYmlContent(itYmlFile, itYmlContent, rootActionName, rootActionNameTitleCase);
 
         // The command executed successfully, show a success message
         outputChannel.appendLine(`✅ The root action ${rootActionName} has been added successfully.`);

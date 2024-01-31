@@ -245,19 +245,8 @@ function addLocaleFiles(submodulesDir, submoduleNameSnakeCase, outputChannel) {
     const configLocalesDir = path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'locales');
     // In the config/locales add, only if it's not already existing, a file named en.yml and another file named it.yml with the en: and it: keys respectively
     // and below them the admin -> actions key with the Dashcase version of the submodule name as value
-    const commonObject = {
-        admin: {
-            actions: {
-                [submoduleNameSnakeCase]: {
-                    menu: submoduleNameSnakeCase,
-                    title: submoduleNameSnakeCase,
-                    breadcrumb: submoduleNameSnakeCase
-                }
-            }
-        }
-    }
-    writeYAMLFile(configLocalesDir, 'en.yml', { en: commonObject }, outputChannel);
-    writeYAMLFile(configLocalesDir, 'it.yml', { it: commonObject }, outputChannel);
+    writeYAMLFile(configLocalesDir, 'en.yml', { en: null }, outputChannel);
+    writeYAMLFile(configLocalesDir, 'it.yml', { it: null }, outputChannel);
 }
 
 function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outputChannel) {
