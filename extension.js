@@ -42,14 +42,14 @@ function activate(context) {
 		require('./commands/createATOM').perform();
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('thecore.addRootAction', function () {
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addRootAction', async (folder) => {
 		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/addRootAction').perform();
+		require('./commands/addRootAction').perform(folder);
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMemberAction', function () {
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMemberAction', async (folder) => {
 		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/addMemberAction').perform();
+		require('./commands/addMemberAction').perform(folder);
 	}));
 }
 

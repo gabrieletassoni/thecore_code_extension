@@ -5,10 +5,11 @@ const fs = require('fs');
 const path = require('path');
 
 // The code you place here will be executed every time your command is executed
-function perform(context) {
-    // Display a message box to the user
-    vscode.window.showInformationMessage('Adding a member Action to the current ATOM.');
-
+function perform(atomDir) {
+    if (!atomDir) {
+        vscode.window.showErrorMessage('Please right click on the ATOM folder and select Add Root Action.');
+        return;
+    }
     // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
     const outputChannel = vscode.window.createOutputChannel('Thecore: Add Member Action');
     outputChannel.show();
@@ -18,7 +19,6 @@ function perform(context) {
     if (!require('../libs/check').workspacePresence()) { return; }
 
     // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/member_actions folder
-    const atomDir = path.dirname(context.fsPath);
     if (!fs.existsSync(atomDir)) {
         outputChannel.appendLine('The selected folder does not exist. Please open a Thecore 3 app and try again.');
         vscode.window.showErrorMessage('The selected folder does not exist. Please open a Thecore 3 app and try again.');

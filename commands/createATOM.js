@@ -98,7 +98,7 @@ async function perform() {
             ignoreFocusOut: true,
             placeHolder: 'Enter the email of the submodule author, i.e.',
             validateInput: (email) => {
-                if (!email) {
+                if (!email || !email.includes('@')) {
                     return '❌ The email is not valid. Please try again.';
                 }
                 return null;
@@ -108,7 +108,7 @@ async function perform() {
             ignoreFocusOut: true,
             placeHolder: 'Enter the url of the submodule, i.e.',
             validateInput: (url) => {
-                if (!url) {
+                if (!url || !url.includes('http')) {
                     return '❌ The url is not valid. Please try again.';
                 }
                 return null;
