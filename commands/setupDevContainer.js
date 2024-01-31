@@ -72,7 +72,7 @@ function perform() {
                 },
                 "remoteUser": "vscode"
             }
-            require('../libs/configs').writeJSONFile(devcontainerDir, 'devcontainer.json', devcontainerConfig);
+            require('../libs/configs').writeJSONFile(devcontainerDir, 'devcontainer.json', devcontainerConfig, outputChannel);
 
             // Creating the docker-compose.yml file inside the .devcontainer directory
             const dockerComposeConfig = {
@@ -129,13 +129,13 @@ function perform() {
                     "bundle": null
                 }
             }
-            require('../libs/configs').writeYAMLFile(devcontainerDir, 'docker-compose.yml', dockerComposeConfig);
+            require('../libs/configs').writeYAMLFile(devcontainerDir, 'docker-compose.yml', dockerComposeConfig, outputChannel);
 
             // Creating the Dockerfile file inside the .devcontainer directory
-            require('../libs/configs').writeTextFile(devcontainerDir, 'Dockerfile', "FROM gabrieletassoni/vscode-devcontainers-thecore:3");
+            require('../libs/configs').writeTextFile(devcontainerDir, 'Dockerfile', "FROM gabrieletassoni/vscode-devcontainers-thecore:3", outputChannel);
 
             // Creating the create-db-user.sql file inside the .devcontainer directory
-            require('../libs/configs').writeTextFile(devcontainerDir, 'create-db-user.sql', "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;");
+            require('../libs/configs').writeTextFile(devcontainerDir, 'create-db-user.sql', "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;", outputChannel);
 
             // Create the backend.code-workspace file
             const workspaceConfig = {
@@ -150,7 +150,7 @@ function perform() {
                     }
                 }
             };
-            require('../libs/configs').writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig);
+            require('../libs/configs').writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig, outputChannel);
         });
     } else {
         outputChannel.appendLine('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');

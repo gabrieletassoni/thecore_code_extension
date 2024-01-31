@@ -120,7 +120,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With gemspec dependencies removed.`);
 
     // Overwrite the .gitignore file with the string provided here
-    createGitignoreFile(path.join(submodulesDir, submoduleNameDashcase));
+    createGitignoreFile(path.join(submodulesDir, submoduleNameDashcase, outputChannel));
 
     // create all these folders in the submodule root, if they not already exist and in this case also add a .keep empty file: db/migrate app/models/concerns/api app/models/concerns/rails_admin config/initializers config/locales
     const dbMigrateDir = path.join(submodulesDir, submoduleNameDashcase, 'db', 'migrate');
@@ -152,7 +152,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
         "    end",
         "end"
     ];
-    writeTextFile(configInitializersDir, 'after_initialize.rb', afterInitializeTxt);
+    writeTextFile(configInitializersDir, 'after_initialize.rb', afterInitializeTxt, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the after_initialize.rb file in it.`);
 
     // In the config/initializers, add a file named add_to_db_migration.rb with the following content:
@@ -169,7 +169,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
         "    # main_tcp_debug.css",
         ")"
     ];
-    writeTextFile(configInitializersDir, 'assets.rb', assetsTxt);
+    writeTextFile(configInitializersDir, 'assets.rb', assetsTxt, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the assets.rb file in it.`);
 
     // Create a db folder in the submodule root, if it not already exist and in this case also add a seeds.rb file with the following content: puts "Seeding from Thecore TCP Debug"
@@ -200,8 +200,8 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
             }
         }
     }
-    writeYAMLFile(configLocalesDir, 'en.yml', { en: commonObject });
-    writeYAMLFile(configLocalesDir, 'it.yml', { it: commonObject });
+    writeYAMLFile(configLocalesDir, 'en.yml', { en: commonObject}, outputChannel);
+    writeYAMLFile(configLocalesDir, 'it.yml', { it: commonObject }, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the en.yml and it.yml files in it.`);
 
     // Add to the config/initializers an abilities.rb file with the following content, the class name 
@@ -221,7 +221,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
         "    end",
         "end"
     ];
-    writeTextFile(configInitializersDir, 'abilities.rb', abilitiesTxt);
+    writeTextFile(configInitializersDir, 'abilities.rb', abilitiesTxt, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the abilities.rb file in it.`);
 
     // Add a github workflow action called gempush.yml with the following content:
@@ -275,7 +275,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
             }
         }
     };
-    writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase, '.github', 'workflows'), 'gempush.yml', gempushObject);
+    writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase, '.github', 'workflows'), 'gempush.yml', gempushObject, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the gempush.yml file in it.`);
 
     // Also add a gitlab ci file suitable for building using the thecore devcontainer, it's content thus must be:
@@ -308,7 +308,7 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
             ]
         }
     };
-    writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase), '.gitlab-ci.yml', gitlabCiOject);
+    writeYAMLFile(path.join(submodulesDir, submoduleNameDashcase), '.gitlab-ci.yml', gitlabCiOject, outputChannel);
     outputChannel.appendLine(`The submodule ${submoduleName} has been created With the .gitlab-ci.yml file in it.`);
 
     // add Thecore dependecies to the submodule Gemfile and gemspec, the two Thecore gems to add are: model_driven_api and thecore_ui_rails_admin both at version ~3.0
