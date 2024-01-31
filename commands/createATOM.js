@@ -11,9 +11,6 @@ const { createGitignoreFile, writeTextFile, writeYAMLFile } = require('../libs/c
  * Creates a Thecore 3 ATOM.
  */
 function perform() {
-    // Display a message box to the user
-    vscode.window.showInformationMessage('Creating a Thecore 3 ATOM.');
-
     // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
     const outputChannel = vscode.window.createOutputChannel('Thecore: Create ATOM');
     outputChannel.show();
@@ -331,7 +328,6 @@ async function createRailsEngine(submoduleName, submoduleNameDashcase, summary, 
     const gemfileBase = path.join(workspaceRoot, 'Gemfile.base');
     fs.appendFileSync(gemfileBase, `\ngem '${submoduleNameDashcase}', path: 'vendor/submodules/${submoduleNameDashcase}'`);
     outputChannel.appendLine(`The submodule ${submoduleName} has been added to the Gemfile.base.`);
-    vscode.window.showInformationMessage(`Submodule ${submoduleName} added to the Gemfile.base.`);
 }
 
 // Make the following code available to the extension.js file

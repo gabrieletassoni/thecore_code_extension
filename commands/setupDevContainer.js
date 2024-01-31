@@ -10,9 +10,6 @@ const { workspaceExixtence } = require('../libs/check');
  * Sets up a Thecore 3 Devcontainer.
  */
 function perform() {
-    // Display a message box to the user
-    vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
-
     // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
     const outputChannel = vscode.window.createOutputChannel('Thecore: Setup Devcontainer');
     outputChannel.show();
