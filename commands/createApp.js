@@ -2,7 +2,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { execShell } = require('../libs/os');
+const { execShell, mkDirP } = require('../libs/os');
 const { workspaceExixtence, workspaceEmptiness, commandExistence, rubyOnRailsAppValidity } = require('../libs/check');
 
 // The code you place here will be executed every time your command is executed
@@ -183,26 +183,12 @@ async function perform() {
             const vendorDir = path.join(workspaceRoot, 'vendor');
             const custombuildsDir = path.join(vendorDir, 'custombuilds');
             const deploytargetsDir = path.join(vendorDir, 'deploytargets');
-            if (!fs.existsSync(custombuildsDir)) {
-                fs.mkdirSync(custombuildsDir, { recursive: true }, (err) => {
-                    if (err) {
-                        outputChannel.appendLine(` ❌ Error creating the ${custombuildsDir} directory: ${err.message}`);
-                        return;
-                    }
-                });
-            }
-            if (!fs.existsSync(deploytargetsDir)) {
-                fs.mkdirSync(deploytargetsDir);
-            }
-            // If the .keep files are already present, don't create them again
-            const keepFile = path.join(custombuildsDir, '.keep');
-            if (!fs.existsSync(keepFile)) {
-                fs.writeFileSync(keepFile, '');
-            }
-            const keepFile2 = path.join(deploytargetsDir, '.keep');
-            if (!fs.existsSync(keepFile2)) {
-                fs.writeFileSync(keepFile2, '');
-            }
+            const submodulesDir = path.join(vendorDir, 'submodules');
+            // Cycle over the directories and create them if they don't exist using the mkDirP function
+            const dirs = [custombuildsDir, deploytargetsDir, submodulesDir];
+            dirs.forEach(dir => {
+                mkDirP(dir, outputChannel);
+            });
     
             // Add and commit the changes
             await execShell(`git add . -A && git commit -m "Add Thecore 3 gems and configuration"`, workspaceRoot, outputChannel);

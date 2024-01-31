@@ -1,4 +1,6 @@
 const exec = require('child_process').exec;
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Executes a shell command.
@@ -29,6 +31,34 @@ const execShell = (cmd, workingDirectory, outputChannel) =>
         });
     });
 
+/**
+ * Creates a directory recursively.
+ *  
+ * @param {string} dir - The directory to create.
+ * @param {vscode.OutputChannel} outputChannel - The output channel where the stdout and stderr will be redirected.
+ * 
+ * @returns {void}
+ * 
+ **/
+const mkDirP = (dir, outputChannel) => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true }, (err) => {
+            if (err) {
+                outputChannel.appendLine(` ❌ Error creating the ${dir} directory: ${err.message}`);
+                throw err;
+            }
+        });
+            
+        // Directory created successfully, create an empty .keep file inside it if it's not already present
+        const keepFile = path.join(dir, '.keep');
+        if (!fs.existsSync(keepFile)) {
+            fs.writeFileSync(keepFile, '');
+        }
+        outputChannel.appendLine(` ✅ ${dir} directory created successfully.`);
+    }
+}
+
 module.exports = {
-    execShell
+    execShell,
+    mkDirP
 }
