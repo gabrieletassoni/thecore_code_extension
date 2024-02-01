@@ -1,8 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+// Add lodash merge
+const deepMerge = require('lodash/merge');
+const yaml = require('js-yaml');
 
 function writeJSONFile(dir, jsonFile, jsonContentObject, outputChannel) {
     outputChannel.appendLine(`📝 Creating JSON file ${jsonFile} inside ${dir}.`);
@@ -18,7 +20,6 @@ function writeYAMLFile(dir, yamlFile, yamlContentObject, outputChannel) {
     // Creating the yaml file inside the directory
     const targetFile = path.join(dir, yamlFile);
     // Writing the file
-    const yaml = require('js-yaml');
     const yamlContent = yaml.dump(yamlContentObject, {
         'styles': {
             '!!null': 'canonical' // dump null as ~
@@ -27,6 +28,27 @@ function writeYAMLFile(dir, yamlFile, yamlContentObject, outputChannel) {
     });
     fs.writeFileSync(targetFile, yamlContent);
     outputChannel.appendLine(` - YAML file ${yamlFile} created successfully.`);
+}
+
+
+function mergeYmlContent(ymlDir, ymlFile, rootActionName, rootActionNameTitleCase, rootElement, outputChannel) {
+    // Synchronicity used only for the example (it stops the Event Loop). 
+    const data = fs.readFileSync(path.join(ymlDir, ymlFile), 'utf8');
+    const parsedData = yaml.load(data);
+    deepMerge(parsedData, {
+        [rootElement]: {
+            admin: {
+                actions: {
+                    [rootActionName]: {
+                        menu: rootActionNameTitleCase,
+                        title: rootActionNameTitleCase,
+                        breadcrumb: rootActionNameTitleCase,
+                    }
+                }
+            }
+        }
+    });
+    writeYAMLFile(ymlDir, ymlFile, parsedData, outputChannel);
 }
 
 function writeTextFile(dir, textFile, textContent, outputChannel) {
@@ -220,4 +242,5 @@ module.exports = {
     writeYAMLFile,
     writeTextFile,
     createGitignoreFile,
+    mergeYmlContent,
 }
