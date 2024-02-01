@@ -32,7 +32,7 @@ async function perform() {
     // Find all the `Dockerfile` files inside `./vendor/custombuilds/`
     const dockerfiles = fs.readdirSync(custombuildsDir).filter(file => file === 'Dockerfile');
     // Run the `docker build` command for each `Dockerfile` file
-    dockerfiles.forEach(dockerfile => {
+    dockerfiles.forEach(async dockerfile => {
         // If in the same directory of the Dockerfile there's a pre-compile.sh file, run it catching the output as environment variables
         // If there's a Gemfile in the same directory of the Dockerfile, run `bundle install` to generate 
         // the `Gemfile.lock` file running `bundle update --gemfile {}`
@@ -81,7 +81,7 @@ async function perform() {
             vscode.window.showInputBox({
                 placeHolder: 'Enter the commit message for the release',
                 value: 'Release'
-            }).then((commitMessage) => {
+            }).then(async (commitMessage) => {
                 // Commit the changes
                 if (!await execShell(`git commit -a -m "${commitMessage}"`, custombuildsDir, outputChannel)) { return; }
                 // Tag the commit with the version

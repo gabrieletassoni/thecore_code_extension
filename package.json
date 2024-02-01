@@ -2,7 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.67",
+  "version": "0.0.71",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
@@ -14,7 +14,7 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./extension.js",
+  "main": "./out/main.js",
   "contributes": {
     "menus": {
       "explorer/context": [
@@ -98,10 +98,12 @@
     ]
   },
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "yarn run lint",
-    "test": "vscode-test",
-    "package": "vsce package"
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
+    "esbuild-base": "rimraf out && esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "build": "npm run -S esbuild-base -- --sourcemap",
+    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
+    "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
+    "test": "eslint src --ext js && tsc --noEmit"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
@@ -109,9 +111,11 @@
     "@types/vscode": "^1.85.0",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "vsce": "^2.15.0"
+    "prettier": "^2.8.1",
+    "rimraf": "^3.0.2",
+    "@vscode/dts": "^0.4.0"
   },
   "dependencies": {
     "js-yaml": "^4.1.0",
