@@ -108,7 +108,7 @@ async function perform() {
             ignoreFocusOut: true,
             placeHolder: 'Enter the url of the submodule, i.e.',
             validateInput: (url) => {
-                if (!url || !url.includes('http')) {
+                if (!url || !url.startsWith('http')) {
                     return '❌ The url is not valid. Please try again.';
                 }
                 return null;
@@ -340,9 +340,18 @@ function setupGemfile(submodulesDir, submoduleNameSnakeCase, outputChannel) {
     // add Thecore dependecies to the submodule Gemfile and gemspec, the two Thecore gems to add are: model_driven_api and thecore_ui_rails_admin both at version ~3.0
     const gemfile = path.join(submodulesDir, submoduleNameSnakeCase, 'Gemfile');
     let gemfileContent = fs.readFileSync(gemfile, 'utf8');
+    gemfileContent += `\ngem 'pg'`;
     gemfileContent += `\ngem 'model_driven_api', '~> 3.1'`;
     gemfileContent += `\ngem 'thecore_ui_rails_admin', '~> 3.2'`;
     fs.writeFileSync(gemfile, gemfileContent);
+
+    // Add the requires to the lib/${submoduleNameSnakeCase}.rb file
+    const libFile = path.join(submodulesDir, submoduleNameSnakeCase, 'lib', `${submoduleNameSnakeCase}.rb`);
+    let libFileContent = fs.readFileSync(libFile, 'utf8');
+    libFileContent += `\nrequire 'model_driven_api'`;
+    libFileContent += `\nrequire 'thecore_ui_rails_admin'`;
+    fs.writeFileSync(libFile, libFileContent);
+    
     outputChannel.appendLine(` - Added the thecore dependecies to ${submoduleNameSnakeCase} Gemfile file.`);
 }
 

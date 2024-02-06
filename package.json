@@ -2,7 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.71",
+  "version": "0.0.72",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
@@ -41,6 +41,10 @@
         {
           "command": "thecore.addMemberAction",
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+        },
+        {
+          "command": "thecore.addMigration",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         }
       ],
       "thecore.main": [
@@ -66,6 +70,10 @@
         },
         {
           "command": "thecore.addMemberAction",
+          "group": "Thecore 3"
+        },
+        {
+          "command": "thecore.addMigration",
           "group": "Thecore 3"
         }
       ]
@@ -94,6 +102,10 @@
       {
         "command": "thecore.addMemberAction",
         "title": "Thecore 3: Add a Member Action"
+      },
+      {
+        "command": "thecore.addMigration",
+        "title": "Thecore 3: Add a DB Migration"
       }
     ]
   },

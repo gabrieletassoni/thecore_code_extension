@@ -51,6 +51,11 @@ function activate(context) {
 		// Call the business logic which is present into the commands directory in the createApp.js file
 		require('./commands/addMemberAction').perform(folder);
 	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMigration', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addMigration').perform(folder);
+	}));
 }
 
 // This method is called when your extension is deactivated

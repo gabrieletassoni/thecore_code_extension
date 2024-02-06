@@ -88,6 +88,15 @@ function commandExistence(command, outputChannel) {
     }
 }
 
+const isPascalCase = (word) => {
+    if (typeof word !== 'string')
+    {
+      return 'It must be a string.'
+    }
+    const pattern = /^[A-Z][A-Za-z]*$/
+    return pattern.test(word)
+  }
+
 // Make the following code available to the extension.js file
 module.exports = {
     workspaceExixtence,
@@ -95,4 +104,5 @@ module.exports = {
     fileExistence,
     workspaceEmptiness,
     commandExistence,
+    isPascalCase
 }
