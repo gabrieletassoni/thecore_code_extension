@@ -2,7 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.72",
+  "version": "0.0.78",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"

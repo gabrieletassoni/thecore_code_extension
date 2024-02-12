@@ -21,8 +21,11 @@ async function perform(atomDir) {
     // Check if we are inside a workspace
     if (!require('../libs/check').workspaceExixtence(outputChannel)) { return; }
 
+    // get the root folder path of the workspace
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+
     try {
-        // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/migrations folder
+        // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and db/migrate folder
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
@@ -66,22 +69,34 @@ async function perform(atomDir) {
         });
         
         // Run the rails g migration command to create the migration file
-        const output = await execShell(`bundle install && rails g migration "${migrationName}" ${migrationDefinition}`, atomDir, outputChannel);
+        const output = await execShell(`bundle install && rails g migration "${migrationName}" ${migrationDefinition}`, workspaceRoot, outputChannel);
         // Parse the output to check if the migration was created successfully, if it's the case, move all the created files into ${atomDir}/db/migrate folder
-        const migrationFile = output.match(/db\/migrate\/\d+_create_\w+.rb/);
-        if (!migrationFile) {
-            outputChannel.appendLine(`❌ An error occurred while adding the migration: ${output}`);
-            vscode.window.showErrorMessage(`An error occurred while adding the migration: ${output}`);
+        let migrationFiles = [];
+        if(output) {
+            migrationFiles = [...output.matchAll(/^\s+create\s+(db\/migrate\/.+\.rb)$/gm)];
+        } else {
+            const errorMessage = "No output from rails g command exists, cannot go on";
+            outputChannel.appendLine(`❌ ${errorMessage}, please inspect theoutput window.`);
+            vscode.window.showErrorMessage(`${errorMessage}, please inspect the output window.`);
+            return;
+        }
+        
+        if (!migrationFiles) {
+            const errorMessage = "No output from rails g command matches evidence of migration file creation, cannot go on";
+            outputChannel.appendLine(`❌ ${errorMessage}, please inspect lines above.`);
+            vscode.window.showErrorMessage(`${errorMessage}, please inspect output window.`);
             return;
         } else {
-            const migrationFilePath = path.join(atomDir, migrationFile[0]);
-            const migrationsDir = path.join(atomDir, 'lib', 'migrations');
-            if (!fs.existsSync(migrationsDir)) {
-                outputChannel.appendLine(`📁 Creating the migrations folder: ${migrationsDir}`);
-                mkDirP(migrationsDir);
-            }
-            outputChannel.appendLine(`📄 Moving the migration file to the migrations folder: ${migrationFilePath}`);
-            fs.renameSync(migrationFilePath, path.join(migrationsDir, path.basename(migrationFilePath)));
+            migrationFiles.forEach(el => {
+                const migrationFilePath = path.join(workspaceRoot, el[1]);
+                const targetAtomDir = path.join(atomDir, 'db', 'migrate');
+                if (!fs.existsSync(targetAtomDir)) {
+                    outputChannel.appendLine(`📁 Creating the migrations folder: ${targetAtomDir}`);
+                    mkDirP(targetAtomDir,outputChannel);
+                }
+                outputChannel.appendLine(`📄 Moving the migration file to the migrations folder: ${migrationFilePath}`);
+                fs.renameSync(migrationFilePath, path.join(targetAtomDir, path.basename(migrationFilePath)));
+            });
         }
 
         // The command executed successfully, show a success message
