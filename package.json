@@ -2,7 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.78",
+  "version": "0.0.82",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
@@ -27,10 +27,6 @@
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
         },
         {
-          "command": "thecore.releaseApp",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
-        },
-        {
           "command": "thecore.createATOM",
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
         },
@@ -44,6 +40,10 @@
         },
         {
           "command": "thecore.addMigration",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+        },
+        {
+          "command": "thecore.addModel",
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         }
       ],
@@ -57,10 +57,6 @@
           "group": "Thecore 3"
         },
         {
-          "command": "thecore.releaseApp",
-          "group": "Thecore 3"
-        },
-        {
           "command": "thecore.createATOM",
           "group": "Thecore 3"
         },
@@ -75,6 +71,10 @@
         {
           "command": "thecore.addMigration",
           "group": "Thecore 3"
+        },
+        {
+          "command": "thecore.addModel",
+          "group": "Thecore 3"
         }
       ]
     },
@@ -86,10 +86,6 @@
       {
         "command": "thecore.createApp",
         "title": "Thecore 3: Create an App"
-      },
-      {
-        "command": "thecore.releaseApp",
-        "title": "Thecore 3: Release this App"
       },
       {
         "command": "thecore.createATOM",
@@ -106,6 +102,10 @@
       {
         "command": "thecore.addMigration",
         "title": "Thecore 3: Add a DB Migration"
+      },
+      {
+        "command": "thecore.addModel",
+        "title": "Thecore 3: Add a Model"
       }
     ]
   },

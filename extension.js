@@ -32,10 +32,10 @@ function activate(context) {
 		require('./commands/createApp').perform();
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
-		// Call the business logic which is present into the commands directory in the createApp.js file
-		require('./commands/releaseApp').perform();
-	}));
+	// context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
+	// 	// Call the business logic which is present into the commands directory in the createApp.js file
+	// 	require('./commands/releaseApp').perform();
+	// }));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.createATOM', function () {
 		// Call the business logic which is present into the commands directory in the createApp.js file
@@ -55,6 +55,11 @@ function activate(context) {
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMigration', async (folder) => {
 		// Call the business logic which is present into the commands directory in the createApp.js file
 		require('./commands/addMigration').perform(folder);
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addModel', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addModel').perform(folder);
 	}));
 }
 

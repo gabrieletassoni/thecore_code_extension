@@ -64,7 +64,15 @@ async function perform() {
             // Read the Gemfile
             const gemfileContent = fs.readFileSync(gemfile, 'utf8');
             // Append the gems to the Gemfile
-            const gemfileContentWithGems = gemfileContent + "\ngem 'rails-erd', group: :development\ngem 'rails_admin'\ngem 'devise'\ngem 'cancancan'";
+            // "\ngem 'sassc-rails'\ngem 'rails-erd', group: :development\ngem 'rails_admin'\ngem 'devise'\ngem 'cancancan'"
+            const gemDependencies = [
+                "gem 'sassc-rails'",
+                "gem 'rails-erd', group: :development",
+                "gem 'rails_admin'",
+                "gem 'devise'",
+                "gem 'cancancan'"
+            ].join("\n");
+            const gemfileContentWithGems = gemfileContent + "\n" + gemDependencies;
             // Write the Gemfile
             fs.writeFileSync(gemfile, gemfileContentWithGems);
     

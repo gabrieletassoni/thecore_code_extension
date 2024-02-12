@@ -117,7 +117,8 @@ async function perform(atomDir) {
                 }
                 outputChannel.appendLine(`📄 Moving the model file to the models folder: ${modelFilePath}`);
                 const modelFileBaseName = path.basename(modelFilePath);
-                fs.renameSync(modelFilePath, path.join(targetAtomDir, modelFileBaseName));
+                const atomModelFile = path.join(targetAtomDir, modelFileBaseName);
+                fs.renameSync(modelFilePath, atomModelFile);
 
                 // Creating the concerns folders for Thecore standard way of adding content to the fat model
                 const apiDir = path.join(atomDir, 'app', 'models', 'concerns', 'api');
@@ -179,7 +180,7 @@ async function perform(atomDir) {
                     `    include RailsAdmin::${modelName}`
                 ];
                 
-                const modelFileContent = fs.readFileSync(modelFilePath, 'utf8');
+                const modelFileContent = fs.readFileSync(atomModelFile, 'utf8');
 
                 const includeLine = `include ${modelName}`;
                 const includeLinesExist = modelFileContent.includes(includeLine);
@@ -190,7 +191,7 @@ async function perform(atomDir) {
                         ` < ApplicationRecord\n${concernIncluders.join('\n')}`
                     );
 
-                    fs.writeFileSync(modelFilePath, updatedModelFileContent, 'utf8');
+                    fs.writeFileSync(atomModelFile, updatedModelFileContent, 'utf8');
                     outputChannel.appendLine(`✅ Modified the ${modelName} RB file adding the concern's includes.`);
                 }
                 

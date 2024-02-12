@@ -119,6 +119,13 @@ async function perform() {
         // Only if all the previous info are valid, create the rails engine
         await createRailsEngine(submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir, outputChannel);
 
+        // Add to the main app Gemfile.base file the line `gem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`
+        const mainAppGemfile = path.join(rorDirs.appDir, 'Gemfile.base');
+        const gemfileContent = fs.readFileSync(mainAppGemfile, 'utf8');
+        const newGemfileContent = gemfileContent + `\ngem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`;
+        fs.writeFileSync(mainAppGemfile, newGemfileContent);
+        outputChannel.appendLine(` - Added the ${submoduleNameSnakeCase} gem to the main app Gemfile.base file.`);
+
         // Inform the user the submodule has been created succesfully
         outputChannel.appendLine(`✅ The submodule ${submoduleName} has been created succesfully.`);
         vscode.window.showInformationMessage(`The submodule ${submoduleName} has been created succesfully.`);
@@ -360,7 +367,7 @@ async function createRailsEngine(submoduleName, submoduleNameSnakeCase, summary,
     outputChannel.appendLine(`Creating the submodule ${submoduleName} using the rails plugin new command.`);
     
     try {
-        await execShell(`rails plugin new "${path.join(submodulesDir, submoduleNameSnakeCase)}" -fG --skip-hotwire --full`, submodulesDir, outputChannel);
+        await execShell(`rails plugin new "${path.join(submodulesDir, submoduleNameSnakeCase)}" -fG --skip-gemfile-entry --skip-hotwire --full`, submodulesDir, outputChannel);  
 
         // Overwrite the .gitignore file with the string provided here
         createGitignoreFile(path.join(submodulesDir, submoduleNameSnakeCase), outputChannel);
