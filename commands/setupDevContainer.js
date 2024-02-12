@@ -65,7 +65,9 @@ async function perform() {
                             "GrapeCity.gc-excelviewer",
                             "rebornix.ruby",
                             "jnbt.vscode-rufo",
-                            "anweber.vscode-httpyac"
+                            "anweber.vscode-httpyac",
+                            "mhutchie.git-graph",
+                            "/etc/thecore/thecore.vsix"
                         ]
                     }
                 },
