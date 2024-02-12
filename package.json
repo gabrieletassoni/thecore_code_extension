@@ -81,7 +81,7 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
+    "vscode:prepublish": "yarn install && npm run -S esbuild-base -- --minify",
     "esbuild-base": "rimraf out && esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
