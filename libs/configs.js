@@ -231,7 +231,8 @@ function createGitignoreFile(dir, outputChannel) {
         'config/database.yml',
         '/app/assets/builds/*',
         '!/app/assets/builds/.keep',
-        '/node_modules'
+        '/node_modules',
+        '*.vsix'
     ];
     writeTextFile(dir, '.gitignore', textContent, outputChannel);
 }

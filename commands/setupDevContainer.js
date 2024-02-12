@@ -4,31 +4,33 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { workspaceExixtence } = require('../libs/check');
+const { writeJSONFile, writeTextFile, writeYAMLFile } = require('../libs/configs');
 
 // The code you place here will be executed every time your command is executed
 /**
  * Sets up a Thecore 3 Devcontainer.
  */
-function perform() {
+async function perform() {
     // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
     const outputChannel = vscode.window.createOutputChannel('Thecore: Setup Devcontainer');
     outputChannel.show();
     outputChannel.appendLine('Setting up a Thecore 3 Devcontainer.');
 
     // Call the checkWorkspace function from the checks.js file, if it's not ok, return
-    if (!workspaceExixtence()) { return; }
+    if (!workspaceExixtence(outputChannel)) { return; }
 
     // Checking if the .devcontainer directory is present in the root of the vs code workspace and creating it if not
     const devcontainerDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer');
     if (!fs.existsSync(devcontainerDir)) {
-        fs.mkdirSync(devcontainerDir);
-        outputChannel.appendLine('.devcontainer directory not exists, creating it right now.');
+        try {
+            fs.mkdirSync(devcontainerDir);
+            outputChannel.appendLine('.devcontainer directory not exists, creating it right now.');
 
-        // Asking the user for the name of the devcontainer
-        vscode.window.showInputBox({
-            placeHolder: 'Enter the name of the devcontainer, i.e. Thecore BE',
-            value: 'thecore-devcontainer'
-        }).then((devcontainerName) => {
+            // Asking the user for the name of the devcontainer
+            const devcontainerName = await vscode.window.showInputBox({
+                ignoreFocusOut: true,
+                prompt: 'Please enter the name of this project, i.e. Thecore Backend.',
+            })
             // Writing the devcontainer.json file
             const devcontainerConfig = {
                 "name": devcontainerName,
@@ -69,7 +71,7 @@ function perform() {
                 },
                 "remoteUser": "vscode"
             }
-            require('../libs/configs').writeJSONFile(devcontainerDir, 'devcontainer.json', devcontainerConfig, outputChannel);
+            writeJSONFile(devcontainerDir, 'devcontainer.json', devcontainerConfig, outputChannel);
 
             // Creating the docker-compose.yml file inside the .devcontainer directory
             const dockerComposeConfig = {
@@ -126,13 +128,13 @@ function perform() {
                     "bundle": null
                 }
             }
-            require('../libs/configs').writeYAMLFile(devcontainerDir, 'docker-compose.yml', dockerComposeConfig, outputChannel);
+            writeYAMLFile(devcontainerDir, 'docker-compose.yml', dockerComposeConfig, outputChannel);
 
             // Creating the Dockerfile file inside the .devcontainer directory
-            require('../libs/configs').writeTextFile(devcontainerDir, 'Dockerfile', "FROM gabrieletassoni/vscode-devcontainers-thecore:3", outputChannel);
+            writeTextFile(devcontainerDir, 'Dockerfile', "FROM gabrieletassoni/vscode-devcontainers-thecore:3", outputChannel);
 
             // Creating the create-db-user.sql file inside the .devcontainer directory
-            require('../libs/configs').writeTextFile(devcontainerDir, 'create-db-user.sql', "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;", outputChannel);
+            writeTextFile(devcontainerDir, 'create-db-user.sql', "CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;", outputChannel);
 
             // Create the backend.code-workspace file
             const workspaceConfig = {
@@ -147,11 +149,17 @@ function perform() {
                     }
                 }
             };
-            require('../libs/configs').writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig, outputChannel);
-        });
+            writeJSONFile(devcontainerDir, 'backend.code-workspace', workspaceConfig, outputChannel);
+
+            outputChannel.appendLine('✅ .devcontainer directory created successfully.');
+            vscode.window.showInformationMessage('✅ .devcontainer directory created successfully.');
+        } catch (error) {
+            outputChannel.appendLine(`❌ Error while creating the .devcontainer directory: ${error}`);
+            vscode.window.showErrorMessage(`Error while creating the .devcontainer directory: ${error}`);
+        }
     } else {
-        outputChannel.appendLine('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
-        vscode.window.showWarningMessage('.devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
+        outputChannel.appendLine('❌ .devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
+        vscode.window.showWarningMessage('❌ .devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
     }
 }
 

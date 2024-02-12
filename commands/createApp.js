@@ -183,6 +183,14 @@ async function perform() {
             // Create a version file with the following content: 3.0.1
             fs.writeFileSync(path.join(workspaceRoot, 'VERSION'), '3.0.1');
     
+
+            // Find if in the workspace directory config/development.rb a line with the following content: config.action_controller.raise_on_missing_callback_actions = true 
+            // if it exists, replace true with false ath the end of the line
+            const developmentConfig = path.join(workspaceRoot, 'config', 'environments', 'development.rb');
+            const developmentConfigContent = fs.readFileSync(developmentConfig, 'utf8');
+            const developmentConfigContentReplaced = developmentConfigContent.replace(/config.action_controller.raise_on_missing_callback_actions = true/, 'config.action_controller.raise_on_missing_callback_actions = false');
+            fs.writeFileSync(developmentConfig, developmentConfigContentReplaced);
+
             // Run the command `rails thecore:db:init`
             await execShell(`rails db:drop && rails thecore:db:init`, workspaceRoot, outputChannel);
             outputChannel.appendLine('Rails thecore:db:init command completed successfully.');

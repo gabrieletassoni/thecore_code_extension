@@ -120,11 +120,11 @@ async function perform() {
         await createRailsEngine(submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir, outputChannel);
 
         // Add to the main app Gemfile.base file the line `gem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`
-        const mainAppGemfile = path.join(rorDirs.appDir, 'Gemfile.base');
+        const mainAppGemfile = path.join(rorDirs.workspaceRoot, 'Gemfile.base');
         const gemfileContent = fs.readFileSync(mainAppGemfile, 'utf8');
         const newGemfileContent = gemfileContent + `\ngem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`;
         fs.writeFileSync(mainAppGemfile, newGemfileContent);
-        outputChannel.appendLine(` - Added the ${submoduleNameSnakeCase} gem to the main app Gemfile.base file.`);
+        outputChannel.appendLine(`✅ Added the ${submoduleNameSnakeCase} gem to the main app Gemfile.base file.`);
 
         // Inform the user the submodule has been created succesfully
         outputChannel.appendLine(`✅ The submodule ${submoduleName} has been created succesfully.`);

@@ -2,7 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.82",
+  "version": "3.0.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
@@ -16,65 +16,36 @@
   "activationEvents": [],
   "main": "./out/main.js",
   "contributes": {
+    
     "menus": {
       "explorer/context": [
         {
           "command": "thecore.setupDevcontainer",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.createApp",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.createATOM",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsRoot"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.addRootAction",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/"
         },
         {
           "command": "thecore.addMemberAction",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/"
         },
         {
           "command": "thecore.addMigration",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/"
         },
         {
           "command": "thecore.addModel",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
-        }
-      ],
-      "thecore.main": [
-        {
-          "command": "thecore.setupDevcontainer",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.createApp",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.createATOM",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.addRootAction",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.addMemberAction",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.addMigration",
-          "group": "Thecore 3"
-        },
-        {
-          "command": "thecore.addModel",
-          "group": "Thecore 3"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\\/]vendor[\\\\\\\/]submodules$/"
         }
       ]
     },
