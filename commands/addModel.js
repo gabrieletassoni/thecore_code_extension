@@ -30,7 +30,7 @@ async function perform(atomDir) {
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!isDir(atomDir)) {return; }
+        if (!isDir(atomDir, outputChannel)) {return; }
         
         const atomName = path.basename(atomDir);
         // Now I check if the gemspec file exists in one form or the other (with dashes or underscores) save in the atomGemspec variable the one that exists, returning in case none exists

@@ -29,7 +29,7 @@ async function perform(atomDir) {
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!isDir(atomDir)) { return; }
+        if (!isDir(atomDir, outputChannel)) { return; }
 
         const atomName = path.basename(atomDir);
         // In some cases, the atomName can have a variant name, for example, the atomName can have dashes, like "the-core-atom", in this case, the variantName will be "the_core_atom"

@@ -27,11 +27,11 @@ async function perform(atomDir) {
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!isDir(atomDir)) { return; }
+        if (!isDir(atomDir, outputChannel)) { return; }
 
         // Is the root_actons folder present?
         const atomRootActionsDir = path.join(atomDir, 'lib', 'root_actions');
-        if (!isDir(atomRootActionsDir)) { return; }
+        if (!isDir(atomRootActionsDir, outputChannel)) { return; }
         // Has a Gemspex file?
         const atomName = path.basename(atomDir);
         if (!hasGemspec(atomDir, atomName, outputChannel)) { return; }
@@ -54,7 +54,7 @@ async function perform(atomDir) {
         }
         // Check if the root action already exists
         const rootActionFile = path.join(atomRootActionsDir, `${rootActionName}.rb`);
-        if (isFile(rootActionFile)) { return; }
+        if (isFile(rootActionFile, outputChannel)) { return; }
         
         // Create the root action file with the following content, replacing tcp_debug with the root action name and using an array of strings to represent it, joind by a newline:
         const rootActionContent = [

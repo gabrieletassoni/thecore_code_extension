@@ -26,10 +26,10 @@ async function perform(atomDir) {
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!isDir(atomDir)) { return; }
+        if (!isDir(atomDir, outputChannel)) { return; }
 
         const atomMemberActionsDir = path.join(atomDir, 'lib', 'member_actions');
-        if (!isDir(atomMemberActionsDir)) { return; }
+        if (!isDir(atomMemberActionsDir, outputChannel)) { return; }
 
         const atomName = path.basename(atomDir);
         if (!hasGemspec(atomDir, atomName, outputChannel)) { return; }
