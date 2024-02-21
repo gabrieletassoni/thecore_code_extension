@@ -5,7 +5,7 @@ RUN apt update && apt install -y less man-db sudo
 
 # Install yo and generator-code using npm in global mode
 RUN npm install -g npm
-RUN npm install -g yo generator-code @vscode/vsce
+RUN npm install -g yo generator-code @vscode/vsce rimraf esbuild
 
 # Ensure default `node` user has access to `sudo`
 ARG USERNAME=node
