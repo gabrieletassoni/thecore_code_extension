@@ -4,7 +4,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { mkDirP, execShell } = require('../libs/os');
-const { isPascalCase } = require('../libs/check');
+const { isPascalCase, hasGemspec, isDir, workspaceExixtence } = require('../libs/check');
 
 // The code you place here will be executed every time your command is executed
 async function perform(atomDir) {
@@ -19,28 +19,21 @@ async function perform(atomDir) {
     outputChannel.appendLine('Adding a migration to the current ATOM.');
 
     // Check if we are inside a workspace
-    if (!require('../libs/check').workspaceExixtence(outputChannel)) { return; }
+    if (!workspaceExixtence(outputChannel)) { return; }
 
     // get the root folder path of the workspace
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
     try {
-        // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and db/migrate folder
+        // Check if The right clicked folder which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and db/migrate folder
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!fs.existsSync(atomDir)) {
-            outputChannel.appendLine(`❌ The selected folder does not exist. Please open a Thecore 3 app and try again.`);
-            vscode.window.showErrorMessage('The selected folder does not exist. Please open a Thecore 3 app and try again.');
-            return;
-        }
+        if (!isDir(atomDir)) { return; }
+
         const atomName = path.basename(atomDir);
-        const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
-        if (!fs.existsSync(atomGemspec)) {
-            outputChannel.appendLine(`❌ The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.`);
-            vscode.window.showErrorMessage('The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.');
-            return;
-        }
+        // In some cases, the atomName can have a variant name, for example, the atomName can have dashes, like "the-core-atom", in this case, the variantName will be "the_core_atom"
+        if (!hasGemspec(atomDir, atomName, outputChannel)) { return; }
 
         // Get the Migration from the user input and check if it's PascalCase, if it's not, show an error message and return
         const migrationName = await vscode.window.showInputBox({

@@ -97,6 +97,51 @@ const isPascalCase = (word) => {
     return pattern.test(word)
   }
 
+const hasGemspec = (atomDir, atomName, outputChannel) => {
+    const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
+    // In some cases, the atomName can have a variant name, for example, the atomName can have dashes, like "the-core-atom", in this case, the variantName will be "the_core_atom"
+    const variantName = atomName.replace(/-/g, '_');
+    const atomGemspecVariant = path.join(atomDir, `${variantName}.gemspec`);
+    if (!fs.existsSync(atomGemspec)) {
+        // Nothing to do, the atomGemspec is already ok
+        return atomGemspec;
+    } else if (!fs.existsSync(atomGemspecVariant)) {
+        return atomGemspecVariant;
+    } else {
+        const message = "The right clicked folder is not a valid Thecore 3 ATOM: I cannot find a valid gemspec file. Please select a Thecore 3 ATOM and try again."
+        outputChannel.appendLine(`❌ ${message}`);
+        return false;
+    }
+}
+
+const isDir = (path, outputChannel) => {        
+    if (fs.isDirectory(path)) {
+        if (fs.accessSync(path))
+            return true;
+        else {
+            outputChannel.appendLine(`❌ The folder  ${path} exists, but cannot be accessed.`);
+            return false;
+        }
+    } else {
+        outputChannel.appendLine(`❌ The folder  ${path} does not exist or is a file.`);
+        return false;
+    }
+}
+
+const isFile = (path, outputChannel) => {        
+    if (fs.isFile(path)) {
+        if (fs.accessSync(path))
+            return true;
+        else {
+            outputChannel.appendLine(`❌ The file ${path} exists, but cannot be accessed.`);
+            return false;
+        }
+    } else {
+        outputChannel.appendLine(`❌ The file  ${path} does not exist or is a directory.`);
+        return false;
+    }
+}
+
 // Make the following code available to the extension.js file
 module.exports = {
     workspaceExixtence,
@@ -104,5 +149,8 @@ module.exports = {
     fileExistence,
     workspaceEmptiness,
     commandExistence,
-    isPascalCase
+    isPascalCase,
+    hasGemspec,
+    isDir,
+    isFile
 }

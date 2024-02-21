@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { writeTextFile, mergeYmlContent } = require('../libs/configs');
 const { mkDirP } = require('../libs/os');
+const { hasGemspec, workspaceExixtence, isDir } = require('../libs/check');
 
 // The code you place here will be executed every time your command is executed
 async function perform(atomDir) {
@@ -19,25 +20,19 @@ async function perform(atomDir) {
     outputChannel.appendLine('Adding a member action to the current ATOM.');
 
     // Check if we are inside a workspace
-    if (!require('../libs/check').workspaceExixtence(outputChannel)) { return; }
+    if (!workspaceExixtence(outputChannel)) { return; }
     try {
-        // Check if the folder right clicked which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/member_actions folder
+        // Check if The right clicked folder which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and lib/member_actions folder
         outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
         // Get only the full path without the file schema
         atomDir = atomDir.fsPath;
-        if (!fs.existsSync(atomDir)) {
-            outputChannel.appendLine(`❌ The selected folder does not exist. Please open a Thecore 3 app and try again.`);
-            vscode.window.showErrorMessage('The selected folder does not exist. Please open a Thecore 3 app and try again.');
-            return;
-        }
-        const atomName = path.basename(atomDir);
-        const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
+        if (!isDir(atomDir)) { return; }
+
         const atomMemberActionsDir = path.join(atomDir, 'lib', 'member_actions');
-        if (!fs.existsSync(atomGemspec) || !fs.existsSync(atomMemberActionsDir)) {
-            outputChannel.appendLine(`❌ The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.`);
-            vscode.window.showErrorMessage('The folder right clicked is not a valid Thecore 3 ATOM. Please select a Thecore 3 ATOM and try again.');
-            return;
-        }
+        if (!isDir(atomMemberActionsDir)) { return; }
+
+        const atomName = path.basename(atomDir);
+        if (!hasGemspec(atomDir, atomName, outputChannel)) { return; }
 
         // Get the memberActionName from the user input and check if it's snakecase, if it's not, show an error message and return
         const memberActionName = await vscode.window.showInputBox({
