@@ -91,6 +91,7 @@ async function perform(atomDir) {
             vscode.window.showErrorMessage(`${errorMessage}, please inspect output window.`);
             return;
         } else {
+            // Migrations
             migrationFiles.forEach(el => {
                 const migrationFilePath = path.join(workspaceRoot, el[1]);
                 const targetAtomDir = path.join(atomDir, 'db', 'migrate');
@@ -101,6 +102,7 @@ async function perform(atomDir) {
                 outputChannel.appendLine(`📄 Moving the migration file to the migrations folder: ${migrationFilePath}`);
                 fs.renameSync(migrationFilePath, path.join(targetAtomDir, path.basename(migrationFilePath)));
             });
+            // Models
             modelFiles.forEach(el => {
                 const modelFilePath = path.join(workspaceRoot, el[1]);
                 const targetAtomDir = path.join(atomDir, 'app', 'models');
@@ -118,6 +120,8 @@ async function perform(atomDir) {
                 mkDirP(apiDir, outputChannel);
                 const railsAdminDir = path.join(atomDir, 'app', 'models', 'concerns', 'rails_admin');
                 mkDirP(railsAdminDir, outputChannel);
+                const endpointsDir = path.join(atomDir, 'app', 'models', 'concerns', 'endpoints');
+                mkDirP(endpointsDir, outputChannel);
 
                 const apiContent = [
                     `module Api::${modelName}`,
@@ -136,19 +140,7 @@ async function perform(atomDir) {
                     `    cattr_accessor :json_attrs`,
                     `    self.json_attrs = ::ModelDrivenApi.smart_merge (json_attrs || {}), {}`,
                     ``,
-                    `    # Here you can add custom actions to be called from the API`,
-                    `    # The action must return an serializable (JSON) object.`,
-                    `    # Here you can find an example, in the API could be called like:`,
-                    `    # `,
-                    `    # GET /api/v2/:model/:id?do=test&custom_parameter=hello`,
-                    `    #`,
-                    `    # Please uncomment it to test with a REST client.`,
-                    `    # Please take note on the fact that, if the do params is test, the custom`,
-                    `    # action definition must be, like below self.custom_action_test.`,
-                    `    # def self.custom_action_test_action_name params`,
-                    `    #     { test: [ :first, :second, :third ], id: params[:id], params: params}`,
-                    `    # end`,
-                    `  end`,
+                    `    # Custom action callable by the API must be defined in /app/models/concerns/endpoints/`,
                     `end`
                 ];
                 writeTextFile(apiDir, modelFileBaseName, apiContent, outputChannel);
@@ -166,6 +158,18 @@ async function perform(atomDir) {
                     `end`
                 ];
                 writeTextFile(railsAdminDir, modelFileBaseName, railsAdminContent, outputChannel);
+
+                const endpointsContent = [
+                    `module Endpoints::${modelName}`,
+                    `    # Here you can add custom actions to be called from the API`,
+                    `    # The action must return an serializable (JSON) object.`,
+                    `    # Example:`,
+                    `    # def self.test params`,
+                    `    #   { message: 'Hello World', params: params }`,
+                    `    # end`,
+                    `end`
+                ];
+                writeTextFile(endpointsDir, modelFileBaseName, endpointsContent, outputChannel);
 
                 // Add to the model file, the inclusion of the concerns
                 const concernIncluders = [
