@@ -179,7 +179,7 @@ async function perform(atomDir) {
                     `    #                error: :string`,
                     `    #            }`,
                     `    #        }`,
-                    `    #    }  `,
+                    `    #    }`,
                     `    #    return explain, 200 if params[:explain] == "true"`,
                     `    #    return { error: "This method responds only to #{explain[:request_verbs].join(', ')} requests" }, 501 if explain[:request_verbs].exclude? params[:request_verb]`,
                     `    #    return { message: "Hello World From Test API Custom Action called test", params: params }, 200`
