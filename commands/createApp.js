@@ -134,11 +134,14 @@ async function perform() {
                 },
                 "build": {
                     "stage": "build",
-                    "only": [
-                        "tags"
-                    ],
-                    "except": [
-                        "branches"
+                    "rules": [
+                        {
+                          "if": "$CI_COMMIT_TAG",
+                          "when": "never"
+                        },
+                        {
+                          "when": "always"
+                        }
                     ],
                     "script": [
                         "sudo -E /usr/bin/app-compile.sh"
@@ -148,12 +151,6 @@ async function perform() {
                     "when": "on_success",
                     "stage": "delivery",
                     "cache": [],
-                    "only": [
-                        "tags"
-                    ],
-                    "except": [
-                        "branches"
-                    ],
                     "variables": {
                         "TARGETENV": "dev"
                     },
@@ -163,14 +160,9 @@ async function perform() {
                 },
                 "to-prod": {
                     "when": "manual",
+                    "allow_failure": false,
                     "stage": "deploy",
                     "cache": [],
-                    "only": [
-                        "tags"
-                    ],
-                    "except": [
-                        "branches"
-                    ],
                     "script": [
                         "/usr/bin/docker-deploy.sh"
                     ]
