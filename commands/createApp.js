@@ -115,7 +115,8 @@ async function perform() {
             const gitlabCiObject = {
                 "image": "gabrieletassoni/vscode-devcontainers-thecore:3",
                 "variables": {
-                    "DISABLE_SPRING": 1
+                    "DISABLE_SPRING": 1,
+                    "GITLAB_OAUTH_TARGET": 'https://oauth2:${GITLAB_PAT}@${GITLAB_HOST}/${CI_PROJECT_PATH}',
                 },
                 "stages": [
                     "build",
