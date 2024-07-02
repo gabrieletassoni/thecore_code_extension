@@ -104,11 +104,11 @@ async function perform() {
             await execShell(`bundle install`, workspaceRoot, outputChannel);
     
             // Rename the Gemfile to Gemfile.base
-            fs.renameSync(gemfile, path.join(workspaceRoot, 'Gemfile.base'));
+            // fs.renameSync(gemfile, path.join(workspaceRoot, 'Gemfile.base'));
             // Create a new Gemfile with this content: eval File.read('Gemfile.base')
-            const gemfileContent3 = "eval File.read('Gemfile.base')";
+            // const gemfileContent3 = "eval File.read('Gemfile.base')";
             // Write the Gemfile
-            fs.writeFileSync(gemfile, gemfileContent3);
+            // fs.writeFileSync(gemfile, gemfileContent3);
     
             // Add a gitlab-ci.yml file with the following content:
             outputChannel.appendLine('Adding .gitlab-ci.yml file.');
@@ -185,7 +185,7 @@ async function perform() {
             fs.writeFileSync(developmentConfig, developmentConfigContentReplaced);
 
             // Run the command `rails thecore:db:init`
-            await execShell(`rails db:drop && rails thecore:db:init`, workspaceRoot, outputChannel);
+            await execShell(`rails db:drop ; rails db:create && rails db:migrate && rails thecore:db:seed`, workspaceRoot, outputChannel);
             outputChannel.appendLine('Rails thecore:db:init command completed successfully.');
     
             // Create empty .keep files into `vendor/custombuilds` and `vendor/deploytargets` directories after having created them if they don't exist

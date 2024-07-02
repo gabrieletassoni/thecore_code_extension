@@ -162,7 +162,7 @@ async function perform(atomDir) {
 
                 const endpointsContent = [
                     `class Endpoints::${modelName} < NonCrudEndpoints`,
-                    `  # self.desc :test, {`,
+                    `  # self.desc '${modelName}', :test, {`,
                     `  #   # Define the action name using openapi swagger format`,
                     `  #   get: {`,
                     `  #     summary: "Test API Custom Action",`,
