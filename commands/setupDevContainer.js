@@ -147,7 +147,7 @@ async function perform() {
                 ],
                 "settings": {
                     "files.associations": {
-                        "Gemfile.base": "gemfile"
+                        "Gemfile": "gemfile"
                     }
                 }
             };

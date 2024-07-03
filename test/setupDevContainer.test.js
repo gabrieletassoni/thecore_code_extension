@@ -102,7 +102,7 @@ suite('Extension Test Suite', () => {
                 ],
                 "settings": {
                     "files.associations": {
-                        "Gemfile.base": "gemfile"
+                        "Gemfile": "gemfile"
                     }
                 }
             }, null, 4)
