@@ -172,11 +172,31 @@ async function perform() {
             outputChannel.appendLine('Writing .gitlab-ci.yml file.');
             require('../libs/configs').writeYAMLFile(workspaceRoot, '.gitlab-ci.yml', gitlabCiObject, outputChannel);
             outputChannel.appendLine('.gitlab-ci.yml file added successfully.');
+
+            // Create a sample config/sidekiq.yml file
+            outputChannel.appendLine('Adding config/sidekiq.yml file.');
+            const sidekiqYmlObject = {
+                ":verbose": false,
+                ":queues": [
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_default",
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailers",
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_analysis",
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_purge",
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_incinerate",
+                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_routing"
+                ],
+                ":scheduler": {
+                  ":dynamic": true,
+                  ":enabled": true
+                }
+              }
+              ;
+            outputChannel.appendLine('Writing config/sidekiq.yml file.');
+            require('../libs/configs').writeYAMLFile(workspaceRoot, 'config/sidekiq.yml', sidekiqYmlObject, outputChannel);
     
             // Create a version file with the following content: 3.0.1
             fs.writeFileSync(path.join(workspaceRoot, 'VERSION'), '3.0.1');
     
-
             // Find if in the workspace directory config/development.rb a line with the following content: config.action_controller.raise_on_missing_callback_actions = true 
             // if it exists, replace true with false ath the end of the line
             const developmentConfig = path.join(workspaceRoot, 'config', 'environments', 'development.rb');
@@ -198,6 +218,12 @@ async function perform() {
             dirs.forEach(dir => {
                 mkDirP(dir, outputChannel);
             });
+
+            // Remove .dockerignore file if it exists
+            const dockerignoreFile = path.join(workspaceRoot, '.dockerignore');
+            if (fs.existsSync(dockerignoreFile)) {
+                fs.unlinkSync(dockerignoreFile);
+            }
     
             // Add and commit the changes
             await execShell(`git add . -A && git commit -m "Add Thecore 3 gems and configuration"`, workspaceRoot, outputChannel);
