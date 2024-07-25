@@ -176,14 +176,15 @@ async function perform() {
             // Create a sample config/sidekiq.yml file
             outputChannel.appendLine('Adding config/sidekiq.yml file.');
             const sidekiqYmlObject = {
+                ":concurrency": "<%= ENV.fetch('RAILS_MAX_THREADS') { 5 } %>",
                 ":verbose": false,
                 ":queues": [
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_default",
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailers",
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_analysis",
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_purge",
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_incinerate",
-                  "#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_routing"
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_default\" %>",
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailers\" %>",
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_analysis\" %>",
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_purge\" %>",
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_incinerate\" %>",
+                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_routing\" %>"
                 ],
                 ":scheduler": {
                   ":dynamic": true,
