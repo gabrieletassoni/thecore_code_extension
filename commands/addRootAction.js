@@ -55,7 +55,10 @@ async function perform(atomDir) {
         // Check if the root action already exists
         const rootActionFile = path.join(atomRootActionsDir, `${rootActionName}.rb`);
         if (isFile(rootActionFile, outputChannel)) { return; }
-        
+                
+        // Create a title case verson of the snake case rootActionName
+        const rootActionNameSnakeCase = rootActionName.toLowerCase().replace(/[-_][a-z0-9]/g, (group) => group.slice(-1).toUpperCase());;
+
         // Create the root action file with the following content, replacing tcp_debug with the root action name and using an array of strings to represent it, joind by a newline:
         const rootActionContent = [
             `RailsAdmin::Config::Actions.add_action "${rootActionName}", :base, :root do`,
@@ -95,16 +98,19 @@ async function perform(atomDir) {
         const mainViewDir = path.join(atomDir, "app", 'views', 'rails_admin', 'main');
         mkDirP(mainViewDir, outputChannel);
         const mainViewContent = [
+            `<%= stylesheet_link_tag 'rails_admin/actions/${rootActionName}' %>`,
             `<div class="card mb-3">`,
             `  <div class="card-body">`,
-            `    <div class="response ${rootActionName}-response" id="response">`,
+            `    <div class="response ${rootActionName}-response" id="${rootActionName}-response">`,
             `    </div>`,
             `    <div class="loader">`,
             `      <div class="double-bounce1"></div>`,
             `      <div class="double-bounce2"></div>`,
             `    </div>`,
             `  </div>`,
-            `</div>`
+            `</div>`,
+            `<button class="btn btn-primary" id="${rootActionName}-id">Click me</button>`,
+            `<%= javascript_include_tag "rails_admin/actions/${rootActionName}" %>`,
         ];
         writeTextFile(mainViewDir, `${rootActionName}.html.erb`, mainViewContent, outputChannel);
 
@@ -125,8 +131,8 @@ async function perform(atomDir) {
         // Append to the file path.join(atomDir, "config", 'initializers', 'assets.rb') the string Rails.application.config.assets.precompile += %w( root_actions/main_${rootActionName}.js root_actions/main_${rootActionName}.css ) if it doesn't exist
         const assetsFile = path.join(atomDir, "config", 'initializers', 'assets.rb');
         const assetsContent = fs.readFileSync(assetsFile).toString();
-        if (!assetsContent.includes(`Rails.application.config.assets.precompile += %w( root_actions/main_${rootActionName}.js root_actions/main_${rootActionName}.css )`)) {
-            fs.appendFileSync(assetsFile, `\nRails.application.config.assets.precompile += %w( root_actions/main_${rootActionName}.js root_actions/main_${rootActionName}.css )`);
+        if (!assetsContent.includes(`Rails.application.config.assets.precompile += %w( rails_admin/actions/${rootActionName}.js rails_admin/actions/${rootActionName}.css )`)) {
+            fs.appendFileSync(assetsFile, `\nRails.application.config.assets.precompile += %w( rails_admin/actions/${rootActionName}.js rails_admin/actions/${rootActionName}.css )`);
             outputChannel.appendLine(`The root action assets precompile line has been added to the ${assetsFile} file.`);
         } else {
             outputChannel.appendLine(`The root action assets precompile line is already present in the ${assetsFile} file.`);
@@ -180,43 +186,62 @@ async function perform(atomDir) {
             `    }`,
             `}`,
             `// End Spinner`,
-            `.${rootActionName}-response {`,
-            `    width: 100%;`,
-            `    margin-left: 0.1em;`,
-            `}`,
-            `#response {`,
+            `#${rootActionName}-response {`,
             `    border-radius: 1em;`,
             `    display: flex;`,
             `    flex-direction: column;`,
             `    justify-content: center;`,
             `}`,
         ];
-        writeTextFile(path.join(atomDir, 'app', 'assets', 'stylesheets'), `main_${rootActionName}.scss`, mainScssContent, outputChannel);
+        writeTextFile(path.join(atomDir, 'app', 'assets', 'stylesheets', 'rails_admin', 'actions'), `${rootActionName}.scss`, mainScssContent, outputChannel);
 
         // Add to vendor/submodules/thecore_tcp_debug/app/assets/javascripts/main_tcp_debug.js the following line, replacing tcp_debug with the root action name
         // The content above to the main_js_file:
         const mainJsContent = [
-            `$(document).on('turbo:load', function (event) {`,
-            `    console.log('Hello from ${rootActionName}');`,
-            `    // Action cable Websocket`,
-            `    App.cable.subscriptions.create("ActivityLogChannel", {`,
-            `        connected() {`,
-            `            console.log("Connected to the channel:", this);`,
-            `            this.send({ message: '${rootActionName} Client is connected', topic: "${rootActionName}", namespace: "subscriptions" });`,
-            `        },`,
-            `        disconnected() {`,
-            `            console.log("${rootActionName} Client Disconnected");`,
-            `        },`,
-            `        received(data) {`,
-            `            if(data["topic"] == "${rootActionName}") {`,
-            `                console.log("${rootActionName}", data);`,
-            `                $("#response").html(data["message"])`,
-            `            }`,
+            `var ${rootActionNameSnakeCase}Cable = null;`,
+            `// If the ${rootActionNameSnakeCase}Function is already defined, then don't redefine it and don't attach it to the eventListener`,
+            `if (typeof ${rootActionNameSnakeCase}Function !== 'function') {`,
+            `    function ${rootActionNameSnakeCase}Function(event) {`,
+            `        console.log('Hello from ${rootActionName}', event);`,
+            `        // Action Cable WebSocket connection only if ${rootActionNameSnakeCase}Cable is not already defined and valid`,
+            `        if (typeof ${rootActionNameSnakeCase}Cable !== 'object' || ${rootActionNameSnakeCase}Cable === null) {`,
+            `            ${rootActionNameSnakeCase}Cable = App.cable.subscriptions.create("ActivityLogChannel", {`,
+            `               connected() {`,
+            `                   console.log("Connected to the channel:", this);`,
+            `                   this.send({ message: '${rootActionName} Client is connected', topic: "${rootActionName}", namespace: "subscriptions" });`,
+            `               },`,
+            `               disconnected() {`,
+            `                   console.log("${rootActionName} Client Disconnected");`,
+            `               },`,
+            `               received(data) {`,
+            `                   if(data["topic"] == "${rootActionName}") {`,
+            `                       console.log("${rootActionName}", data);`,
+            `                       $("#response").html(data["message"])`,
+            `                   }`,
+            `               }`,
+            `           });`,
             `        }`,
-            `    });`,
-            `});`,
+            `        // Send a message to the server`,
+            `        ${rootActionNameSnakeCase}Cable.send({ message: '${rootActionName} Client is sending a message', topic: "${rootActionName}", namespace: "subscriptions" });`,
+            `        // Using plain Javascript, attach to the button with ID ${rootActionName}-id a click event listener which sends to the server an xhr get request and alerts the response`,
+            `        document.getElementById('${rootActionName}-id').addEventListener('click', function() {`,
+            `            var xhr = new XMLHttpRequest();`,
+            `            xhr.open('GET', "#{rails_admin.send('${rootActionName}_path')}", true);`,
+            `            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');`,
+            `            xhr.onreadystatechange = function() {`,
+            `                if (xhr.readyState == 4 && xhr.status == 200) {`,
+            `                    var response = JSON.parse(xhr.responseText);`,
+            `                    document.getElementById('${rootActionName}-response').innerHTML = response.message;`,
+            `                }`,
+            `            }`,
+            `            xhr.send();`,
+            `        });`,
+            `    }`,
+            `}`,
+            `// Attach the function to the eventListener`,
+            `document.addEventListener('turbo:load', ${rootActionNameSnakeCase}Function)});`,
         ];
-        writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts'), `main_${rootActionName}.js`, mainJsContent, outputChannel);
+        writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'), `${rootActionName}.js`, mainJsContent, outputChannel);
 
         // Create a title case verson of the snake case rootActionName
         const rootActionNameTitleCase = rootActionName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');

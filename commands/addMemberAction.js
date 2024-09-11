@@ -57,7 +57,10 @@ async function perform(atomDir) {
             vscode.window.showErrorMessage(`The member action ${memberActionName} already exists. Please try again.`);
             return;
         }
-                
+        
+        // Create a title case verson of the snake case memberActionName
+        const memberActionNameSnakeCase = memberActionName.toLowerCase().replace(/[-_][a-z0-9]/g, (group) => group.slice(-1).toUpperCase());;
+
         // Create the member Action file with the following content, replacing tcp_debug with the member Action name and using an array of strings to represent it, joind by a newline:
         const memberActionContent = [
             `RailsAdmin::Config::Actions.add_action "${memberActionName}", :base, :member do`,
@@ -71,10 +74,13 @@ async function perform(atomDir) {
             `    controller do`,
             `        proc do`,
             `            # if it's a form submission, then update the password`,
-            `            if request.patch?`,
+            `            if !request.xhr? && request.patch?`,
             `                flash[:success] = I18n.t("Succesfully clicked on sample action")`,
             `                # Redirect to the object`,
             `                redirect_to index_path(model_name: @abstract_model.to_param)`,
+            `            elsif request.xhr? && request.get?`,
+            `                # Return a json response`,
+            `                render json: { message: "Hello from ${memberActionName}" }, status: :ok`,
             `            end`,
             `        end`,
             `    end`,
@@ -82,11 +88,13 @@ async function perform(atomDir) {
         ];
         writeTextFile(atomMemberActionsDir, `${memberActionName}.rb`, memberActionContent, outputChannel);
 
-        // Using the same logic, add a file in app/views/rails_admin/main with the following content, replacing tcp_debug with the member Action name and creating the folders if they do not exists:
+        // Using the same logic, add a file in app/views/rails_admin/main with the following content, creating the folders if they do not exists.
+        // Add also a button to send am xhr get request and alert with the result.
         const mainViewDir = path.join(atomDir, "app", 'views', 'rails_admin', 'main');
         mkDirP(mainViewDir, outputChannel);
         const mainViewContent = [
-            `<%= form_for(@object, url: ${memberActionName}_path, html: { method: :patch }, class: "main") do |f| %>`,
+            `<%= stylesheet_link_tag 'rails_admin/actions/${memberActionName}' %>`,
+            `<%= form_with(url: ${memberActionName}_path, html: { method: :patch }, class: "main", id: "${memberActionName}-id") do |f| %>`,
             `    <div class="form-actions row justify-content-end my-3">`,
             `        <div class="col-sm-10">`,
             `            <input name="return_to" type="hidden" value="<%=edit_path(@abstract_model, @object.id)%>">`,
@@ -96,7 +104,11 @@ async function perform(atomDir) {
             `            </button>`,
             `        </div>`,
             `    </div>`,
-            `<% end %>`
+            `<% end %>`,
+            `<!-- The button to test the xhr get request -->`,
+            `<button id="${memberActionName}-id" class="btn btn-primary">Test ${memberActionName}</button>`,
+            `<div id="${memberActionName}-response"></div>`,
+            `<%= javascript_include_tag "rails_admin/actions/${memberActionName}" %>`,
         ];
         writeTextFile(mainViewDir, `${memberActionName}.html.erb`, mainViewContent, outputChannel);
 
@@ -117,14 +129,17 @@ async function perform(atomDir) {
         // Append to the file path.join(atomDir, "config", 'initializers', 'assets.rb') the string Rails.application.config.assets.precompile += %w( member_actions/main_${memberActionName}.js member_actions/main_${memberActionName}.css ) if it doesn't exist
         const assetsFile = path.join(atomDir, "config", 'initializers', 'assets.rb');
         const assetsContent = fs.readFileSync(assetsFile).toString();
-        if (!assetsContent.includes(`Rails.application.config.assets.precompile += %w( member_actions/main_${memberActionName}.js member_actions/main_${memberActionName}.css )`)) {
-            fs.appendFileSync(assetsFile, `\nRails.application.config.assets.precompile += %w( member_actions/main_${memberActionName}.js member_actions/main_${memberActionName}.css )`);
+        // The paths are like if show_sample_chart is the member action name:
+        // rails_admin/actions/show_sample_chart.js
+        // rails_admin/actions/show_sample_chart.css
+        if (!assetsContent.includes(`Rails.application.config.assets.precompile += %w( rails_admin/actions/${memberActionName}.js rails_admin/actions/${memberActionName}.css )`)) {
+            fs.appendFileSync(assetsFile, `\nRails.application.config.assets.precompile += %w( rails_admin/actions/${memberActionName}.js rails_admin/actions/${memberActionName}.css )`);
             outputChannel.appendLine(`The member action assets precompile line has been added to the ${assetsFile} file.`);
         } else {
             outputChannel.appendLine(`The member action assets precompile line is already present in the ${assetsFile} file.`);
         }
 
-        // Add to vendor/submodules/thecore_tcp_debug/app/assets/stylesheets/main_tcp_debug.scss the following line, replacing tcp_debug with the member action name
+        // Add to app/assets/stylesheets/rails_admin/actions/tcp_debug.scss the following line, replacing tcp_debug with the member action name
         // .tcp-debug { background-color: #f00; }
         const mainScssContent = [
             `// Spinner`,
@@ -172,43 +187,62 @@ async function perform(atomDir) {
             `    }`,
             `}`,
             `// End Spinner`,
-            `.${memberActionName}-response {`,
-            `    width: 100%;`,
-            `    margin-left: 0.1em;`,
-            `}`,
-            `#response {`,
+            `#${memberActionName}-response {`,
             `    border-radius: 1em;`,
             `    display: flex;`,
             `    flex-direction: column;`,
             `    justify-content: center;`,
             `}`,
         ];
-        writeTextFile(path.join(atomDir, 'app', 'assets', 'stylesheets'), `main_${memberActionName}.scss`, mainScssContent, outputChannel);
+        writeTextFile(path.join(atomDir, 'app', 'assets', 'stylesheets', 'rails_admin', 'actions'), `${memberActionName}.scss`, mainScssContent, outputChannel);
 
         // Add to vendor/submodules/thecore_tcp_debug/app/assets/javascripts/main_tcp_debug.js the following line, replacing tcp_debug with the member action name
         // The content above to the main_js_file:
         const mainJsContent = [
-            `$(document).on('turbo:load', function (event) {`,
-            `    console.log('Hello from ${memberActionName}');`,
-            `    // Action cable Websocket`,
-            `    App.cable.subscriptions.create("ActivityLogChannel", {`,
-            `        connected() {`,
-            `            console.log("Connected to the channel:", this);`,
-            `            this.send({ message: '${memberActionName} Client is connected', topic: "${memberActionName}", namespace: "subscriptions" });`,
-            `        },`,
-            `        disconnected() {`,
-            `            console.log("${memberActionName} Client Disconnected");`,
-            `        },`,
-            `        received(data) {`,
-            `            if(data["topic"] == "${memberActionName}") {`,
-            `                console.log("${memberActionName}", data);`,
-            `                $("#response").html(data["message"])`,
-            `            }`,
+            `var ${memberActionNameSnakeCase}Cable = null;`,
+            `// If the ${memberActionNameSnakeCase}Function is already defined, then don't redefine it and don't attach it to the eventListener`,
+            `if (typeof ${memberActionNameSnakeCase}Function !== 'function') {`,
+            `    function ${memberActionNameSnakeCase}Function(event) {`,
+            `        console.log('Hello from ${memberActionName}', event);`,
+            `        // Action Cable WebSocket connection only if ${memberActionNameSnakeCase}Cable is not already defined and valid`,
+            `        if (typeof ${memberActionNameSnakeCase}Cable !== 'object' || ${memberActionNameSnakeCase}Cable === null) {`,
+            `            ${memberActionNameSnakeCase}Cable = App.cable.subscriptions.create("ActivityLogChannel", {`,
+            `               connected() {`,
+            `                   console.log("Connected to the channel:", this);`,
+            `                   this.send({ message: '${memberActionName} Client is connected', topic: "${memberActionName}", namespace: "subscriptions" });`,
+            `               },`,
+            `               disconnected() {`,
+            `                   console.log("${memberActionName} Client Disconnected");`,
+            `               },`,
+            `               received(data) {`,
+            `                   if(data["topic"] == "${memberActionName}") {`,
+            `                       console.log("${memberActionName}", data);`,
+            `                       $("#response").html(data["message"])`,
+            `                   }`,
+            `               }`,
+            `           });`,
             `        }`,
-            `    });`,
-            `});`,
+            `        // Send a message to the server`,
+            `        ${memberActionNameSnakeCase}Cable.send({ message: '${memberActionName} Client is sending a message', topic: "${memberActionName}", namespace: "subscriptions" });`,
+            `        // Using plain Javascript, attach to the button with ID ${memberActionName}-id a click event listener which sends to the server an xhr get request and alerts the response`,
+            `        document.getElementById('${memberActionName}-id').addEventListener('click', function() {`,
+            `            var xhr = new XMLHttpRequest();`,
+            `            xhr.open('GET', "#{rails_admin.send('${memberActionName}_path')}", true);`,
+            `            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');`,
+            `            xhr.onreadystatechange = function() {`,
+            `                if (xhr.readyState == 4 && xhr.status == 200) {`,
+            `                    var response = JSON.parse(xhr.responseText);`,
+            `                    document.getElementById('${memberActionName}-response').innerHTML = response.message;`,
+            `                }`,
+            `            }`,
+            `            xhr.send();`,
+            `        });`,
+            `    }`,
+            `}`,
+            `// Attach the function to the eventListener`,
+            `document.addEventListener('turbo:load', ${memberActionNameSnakeCase}Function)});`,
         ];
-        writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts'), `main_${memberActionName}.js`, mainJsContent, outputChannel);
+        writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'), `${memberActionName}.js`, mainJsContent, outputChannel);
 
         // Create a title case verson of the snake case memberActionName
         const memberActionNameTitleCase = memberActionName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
