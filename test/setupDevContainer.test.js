@@ -63,8 +63,7 @@ suite('Extension Test Suite', () => {
                 "customizations": {
                     "vscode": {
                         "extensions": [
-                            "rebornix.Ruby",
-                            "wingrunr21.vscode-ruby",
+                            "Shopify.ruby-lsp"
                             // ... other extensions
                         ]
                     }

@@ -43,8 +43,7 @@ async function perform() {
                     "vscode": {
                         // Add the IDs of extensions you want installed when the container is created.
                         "extensions": [
-                            "rebornix.Ruby",
-                            "wingrunr21.vscode-ruby",
+                            "Shopify.ruby-lsp",
                             "ms-azuretools.vscode-docker",
                             "esbenp.prettier-vscode",
                             "dbaeumer.vscode-eslint",
@@ -63,7 +62,6 @@ async function perform() {
                             "eamodio.gitlens",
                             "aliariff.vscode-erb-beautify",
                             "GrapeCity.gc-excelviewer",
-                            "rebornix.ruby",
                             "jnbt.vscode-rufo",
                             "anweber.vscode-httpyac",
                             "mhutchie.git-graph",
