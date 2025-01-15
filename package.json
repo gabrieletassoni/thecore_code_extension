@@ -2,6 +2,7 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
+  "publisher": "gabrieletassoni",
   "version": "3.0.6",
   "repository": {
     "type": "git",
