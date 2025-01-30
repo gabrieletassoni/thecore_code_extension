@@ -43,7 +43,6 @@ async function perform() {
                     "vscode": {
                         // Add the IDs of extensions you want installed when the container is created.
                         "extensions": [
-                            "Shopify.ruby-lsp",
                             "ms-azuretools.vscode-docker",
                             "esbenp.prettier-vscode",
                             "dbaeumer.vscode-eslint",
@@ -51,7 +50,6 @@ async function perform() {
                             "henriiik.vscode-sort",
                             "karunamurti.haml",
                             "iciclesoft.workspacesort",
-                            "humao.rest-client",
                             "howardzuo.vscode-git-tags",
                             "shakram02.bash-beautify",
                             "rogalmic.bash-debug",
@@ -59,12 +57,15 @@ async function perform() {
                             "redhat.vscode-yaml",
                             "funkyremi.vscode-google-translate",
                             "mohd-akram.vscode-html-format",
+                            "lewisardern.semgrep-snippets",
                             "eamodio.gitlens",
+                            "donjayamanne.githistory",
                             "aliariff.vscode-erb-beautify",
                             "GrapeCity.gc-excelviewer",
                             "jnbt.vscode-rufo",
                             "anweber.vscode-httpyac",
                             "mhutchie.git-graph",
+                            "Shopify.ruby-lsp",
                             "/etc/thecore/thecore.vsix"
                         ]
                     }

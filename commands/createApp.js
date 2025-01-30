@@ -46,7 +46,7 @@ async function perform() {
         // This fixes the IDE to VS Code with remote devcontainers, TODO: check how to make it general
         await execShell("sudo chown -R vscode:vscode .", workspaceRoot, outputChannel);
         // Run the rails new command `rails new . --database=postgresql --asset-pipeline=sprockets --skip-git` being sure that it will be run from the workspace root and output the stdout and stderr to the ${workspaceRoot}/tmp/rails_new.log file
-        await execShell(`rails new . --database=postgresql --asset-pipeline=sprockets --skip-git`, workspaceRoot, outputChannel);
+        await execShell(`rails new . --database=postgresql --asset-pipeline=sprockets --devcontainer --skip-git`, workspaceRoot, outputChannel);
     
         // Overwrite the .gitignore file with the string provided here
         require('../libs/configs').createGitignoreFile(workspaceRoot, outputChannel);
