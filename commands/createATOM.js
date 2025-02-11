@@ -316,7 +316,6 @@ function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outp
         variables: {
             GITLAB_EMAIL: email,
             GITLAB_USER_NAME: author,
-            GITLAB_OAUTH_TARGET: 'https://oauth2:${GITLAB_PAT}@${GITLAB_HOST}/${CI_PROJECT_PATH}',
             GITLAB_GEM_REPO_TARGET: 'https://${GEM_HOST}/',
             GEM_HOST_API_KEY: '${GEMS_REPO_CREDENTIALS}'
         },
