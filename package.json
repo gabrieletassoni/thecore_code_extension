@@ -9,7 +9,8 @@
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.85.0",
+    "node": ">=18"
   },
   "categories": [
     "Other"
@@ -17,7 +18,6 @@
   "activationEvents": [],
   "main": "./out/main.js",
   "contributes": {
-    
     "menus": {
       "explorer/context": [
         {
@@ -86,19 +86,19 @@
     "esbuild-base": "rimraf out && esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
-    "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
+    "fmt": "prettier --write \"src/**/*.ts\" && npm run test -- --fix",
     "test": "eslint src --ext js && tsc --noEmit"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
     "@types/vscode": "^1.85.0",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8",
-    "esbuild": "^0.20.0",
-    "eslint": "^8.56.0",
-    "prettier": "^2.8.1",
-    "rimraf": "^3.0.2",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.4.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.0",
     "@vscode/dts": "^0.4.0"
   },
   "dependencies": {
