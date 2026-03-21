@@ -1,52 +1,98 @@
-const vscode = require('vscode');
+'use strict';
+
+const assert = require('assert');
+const sinon = require('sinon');
 const fs = require('fs');
 const path = require('path');
+const vscode = require('vscode');
+
 const { perform } = require('../commands/addRootAction');
-const jest = require('jest');
-const expect = require('expect');
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+const ATOM_DIR = path.resolve(__dirname, 'samples/atom');
 
-	test('addRootAction', () => {
-		// Mock the vscode.window.showInformationMessage method
-		vscode.window.showInformationMessage = jest.fn();
+function makeOutputChannel() {
+    return { show: () => {}, appendLine: () => {}, append: () => {} };
+}
 
-		// Mock the vscode.window.showErrorMessage method
-		vscode.window.showErrorMessage = jest.fn();
+describe('commands/addRootAction', () => {
+    beforeEach(() => {
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
+        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
+    });
 
-		// Mock the fs.existsSync method
-		fs.existsSync.mockReturnValue(true);
+    afterEach(() => sinon.restore());
 
-		// Mock the fs.writeFileSync method
-		fs.writeFileSync.mockImplementation(() => {});
+    it('shows an error when atomDir is undefined', async () => {
+        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+        await perform(undefined);
+        assert.ok(errorStub.calledOnce);
+        assert.ok(errorStub.firstCall.args[0].includes('right click'));
+    });
 
-		// Mock the vscode.window.showInputBox method
-		vscode.window.showInputBox = jest.fn().mockResolvedValue('root_action');
+    it('returns early when no workspace is open', async () => {
+        vscode.workspace.workspaceFolders = undefined;
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform({ fsPath: ATOM_DIR });
+        assert.ok(!infoStub.called);
+    });
 
-		// Call the perform function
-		perform({ fsPath: path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "test", "samples", "atom") });
+    it('returns early when atomDir is not a directory', async () => {
+        const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform({ fsPath: gemspecPath });
+        assert.ok(!infoStub.called);
+    });
 
-		// Assert that the vscode.window.showInformationMessage method was called with the correct message
-		expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Adding a root Action to the current ATOM.');
+    it('returns early when lib/root_actions does not exist inside atomDir', async () => {
+        const configDir = path.join(ATOM_DIR, 'config');
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform({ fsPath: configDir });
+        assert.ok(!infoStub.called);
+    });
 
-		// Assert that the vscode.window.showErrorMessage method was not called
-		expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+    it('returns early when user cancels the input box', async () => {
+        sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform({ fsPath: ATOM_DIR });
+        assert.ok(!infoStub.called);
+    });
 
-		// Assert that the fs.existsSync method was called with the correct paths
-		expect(fs.existsSync).toHaveBeenCalledWith('/path/to/atom');
-		expect(fs.existsSync).toHaveBeenCalledWith('/path/to/atom/root_action.gemspec');
-		expect(fs.existsSync).toHaveBeenCalledWith('/path/to/atom/lib/root_actions');
+    it('returns early when the root action file already exists', async () => {
+        sinon.stub(vscode.window, 'showInputBox').resolves('existing_root');
+        const realExistsSync = fs.existsSync.bind(fs);
+        sinon.stub(fs, 'existsSync').callsFake((p) => {
+            if (p.endsWith('existing_root.rb')) return true;
+            return realExistsSync(p);
+        });
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform({ fsPath: ATOM_DIR });
+        // isFile returns true → function returns early without success message
+        assert.ok(!infoStub.called);
+    });
 
-		// Assert that the vscode.window.showInputBox method was called with the correct prompt
-		expect(vscode.window.showInputBox).toHaveBeenCalledWith({ prompt: 'Please enter the name of the root action to add.' });
+    it('creates root action files and shows success on the happy path', async () => {
+        sinon.stub(vscode.window, 'showInputBox').resolves('my_root_action');
+        sinon.stub(fs, 'writeFileSync');
+        sinon.stub(fs, 'appendFileSync');
+        sinon.stub(fs, 'mkdirSync');
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-		// Assert that the fs.writeFileSync method was called with the correct arguments
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/lib/root_actions/root_action.rb', expect.any(String));
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/app/views/rails_admin/main/root_action.html.erb', expect.any(String));
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/config/initializers/after_initialize.rb', expect.any(String));
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/config/initializers/assets.rb', expect.any(String));
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/vendor/submodules/thecore_tcp_debug/app/assets/stylesheets/main_root_action.scss', expect.any(String));
-		expect(fs.writeFileSync).toHaveBeenCalledWith('/path/to/atom/vendor/submodules/thecore_tcp_debug/app/assets/javascripts/main_root_action.js', expect.any(String));
-	});
+        await perform({ fsPath: ATOM_DIR });
+
+        assert.ok(infoStub.calledOnce, 'success message should be shown');
+        assert.ok(infoStub.firstCall.args[0].includes('my_root_action'));
+    });
+
+    it('shows an error message when an unexpected exception is thrown', async () => {
+        sinon.stub(vscode.window, 'showInputBox').resolves('crash_action');
+        sinon.stub(fs, 'writeFileSync').throws(new Error('disk full'));
+        sinon.stub(fs, 'appendFileSync');
+        sinon.stub(fs, 'mkdirSync');
+        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+
+        await perform({ fsPath: ATOM_DIR });
+
+        assert.ok(errorStub.calledOnce);
+        assert.ok(errorStub.firstCall.args[0].includes('disk full'));
+    });
 });

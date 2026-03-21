@@ -1,90 +1,82 @@
-const vscode = require('vscode');
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const jest = require('jest');
-const { createApp } = require('../commands/createApp');
+'use strict';
+
 const assert = require('assert');
-const { expect } = require('jest');
+const sinon = require('sinon');
+const fs = require('fs');
+const vscode = require('vscode');
+const proxyquire = require('proxyquire');
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+function makeOutputChannel() {
+    return { show: () => {}, appendLine: () => {}, append: () => {} };
+}
 
-	test('createApp', () => {
-		// Mock the vscode.window.showInformationMessage method
-		vscode.window.showInformationMessage = jest.fn();
+describe('commands/createApp', () => {
+    let execShellStub, mkDirPStub, perform;
 
-		// Mock the vscode.window.showErrorMessage method
-		vscode.window.showErrorMessage = jest.fn();
+    before(() => {
+        execShellStub = sinon.stub();
+        mkDirPStub = sinon.stub();
+        perform = proxyquire('../commands/createApp', {
+            '../libs/os': { execShell: execShellStub, mkDirP: mkDirPStub },
+        }).perform;
+    });
 
-		// Mock the child_process.exec method
-		exec.mockImplementation((command, callback) => {
-			if (command === 'ruby -v') {
-				callback(null, 'ruby version 2.7.0');
-			} else if (command === 'rails -v') {
-				callback(null, 'rails version 6.0.3');
-			} else if (command === 'bundle -v') {
-				callback(null, 'Bundler version 2.1.4');
-			} else if (command.startsWith('rails new')) {
-				callback(null, '', '');
-			} else if (command.startsWith('git')) {
-				callback(null, '', '');
-			}
-		});
+    beforeEach(() => {
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
+        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
+        execShellStub.reset();
+        mkDirPStub.reset();
+    });
 
-		// Mock the fs.existsSync method
-		fs.existsSync.mockReturnValue(false);
+    afterEach(() => sinon.restore());
 
-		// Mock the fs.writeFileSync method
-		fs.writeFileSync.mockImplementation(() => {});
+    it('returns early when no workspace is open', async () => {
+        vscode.workspace.workspaceFolders = undefined;
+        await perform();
+        assert.ok(!execShellStub.called, 'no shell commands should run without a workspace');
+    });
 
-		// Call the createApp function
-		createApp();
+    it('returns early when workspace has more than one folder (not empty)', async () => {
+        vscode.workspace.workspaceFolders = [
+            { uri: { fsPath: '/ws1' } },
+            { uri: { fsPath: '/ws2' } },
+        ];
+        await perform();
+        assert.ok(!execShellStub.called);
+    });
 
-		// Assert that the vscode.window.showInformationMessage method was called with the correct message
-		assert(vscode.window.showInformationMessage).toHaveBeenCalledWith('Creating a Thecore 3 App.');
+    it('returns early when workspace is already a Rails app', async () => {
+        // All RoR directories already exist → rubyOnRailsAppValidity returns dirs → early return
+        sinon.stub(fs, 'existsSync').returns(true);
+        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => true });
+        await perform();
+        assert.ok(!execShellStub.called);
+    });
 
-		// Assert that the vscode.window.showErrorMessage method was not called
-		assert(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+    it('runs shell commands and shows success when creating a new app', async () => {
+        // workspace is empty: existsSync returns false for RoR dirs, true for Gemfile
+        sinon.stub(fs, 'existsSync').callsFake((p) => p.endsWith('Gemfile'));
+        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => false });
+        const gemfileContent = '# Gemfile\nsource "https://rubygems.org"\n';
+        sinon.stub(fs, 'readFileSync').returns(gemfileContent);
+        sinon.stub(fs, 'writeFileSync');
+        sinon.stub(fs, 'unlinkSync');
+        execShellStub.resolves('');
 
-		// Assert that the child_process.exec method was called with the correct commands
-		assert(exec).toHaveBeenCalledWith('ruby -v', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('rails -v', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('bundle -v', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('rails new . --database=postgresql --asset-pipeline=sprockets --skip-git', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('git init', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('git checkout -b main', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('git add .', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('git commit -m "Initial commit"', expect.any(Function));
-		assert(exec).toHaveBeenCalledWith('git branch -M main', expect.any(Function));
+        await perform();
 
-		// Assert that the fs.existsSync method was called with the correct paths
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'app'));
-		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        assert.ok(execShellStub.called, 'shell commands should have been invoked');
+    });
 
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'bin'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'config'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'db'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'lib'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'log'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'public'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'storage'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'test'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'tmp'));
-		expect(fs.existsSync).toHaveBeenCalledWith(path.join(workspaceRoot, 'vendor'));
+    it('shows an error message when a shell command fails', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => false });
+        execShellStub.rejects(new Error('rails not found'));
+        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 
-		// Assert that the fs.writeFileSync method was called with the correct arguments
-		expect(fs.writeFileSync).toHaveBeenCalledWith(path.join(workspaceRoot, '.gitignore'), expect.any(String));
+        await perform();
 
-		// Assert that the exec method was called with the correct commands after writing the .gitignore file
-		expect(exec).toHaveBeenCalledWith('bundle install', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails generate devise:install', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails g rails_admin:install app --asset=sprockets', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('bundle install', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails active_storage:install', expect.any(Function));
-		expect(exec).toHaveBeenCalledWith('rails action_text:install', expect.any(Function));
-
-		// Assert that the vscode.window.showErrorMessage method was not called after checking the Gemfile
-		expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
-	});
+        assert.ok(errorStub.calledOnce);
+        assert.ok(errorStub.firstCall.args[0].includes('rails not found'));
+    });
 });

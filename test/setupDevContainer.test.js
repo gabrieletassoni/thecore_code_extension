@@ -1,113 +1,91 @@
-const vscode = require('vscode');
+'use strict';
+
+const assert = require('assert');
+const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const { expect } = require('jest');
-const { setupDevContainer } = require('../commands/setupDevContainer');
-const jest = require('jest');
+const vscode = require('vscode');
 
-suite('Extension Test Suite', () => {
-    vscode.window.showInformationMessage('Start all tests.');
+const { perform } = require('../commands/setupDevContainer');
 
-    test('setupDevContainer', () => {
-        // Mock the vscode.window.showInformationMessage method
-        vscode.window.showInformationMessage = jest.fn();
+function makeOutputChannel() {
+    return { show: () => {}, appendLine: () => {}, append: () => {} };
+}
 
-        // Mock the vscode.window.showErrorMessage method
-        vscode.window.showErrorMessage = jest.fn();
+describe('commands/setupDevContainer', () => {
+    beforeEach(() => {
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
+        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
+    });
 
-        // Mock the vscode.window.showInputBox method
-        vscode.window.showInputBox = jest.fn().mockResolvedValue('thecore-devcontainer');
+    afterEach(() => sinon.restore());
 
-        // Mock the fs.existsSync method
-        fs.existsSync = jest.fn().mockReturnValue(false);
+    it('returns early when no workspace is open', async () => {
+        vscode.workspace.workspaceFolders = undefined;
+        const mkdirSyncStub = sinon.stub(fs, 'mkdirSync');
+        await perform();
+        assert.ok(!mkdirSyncStub.called, 'should not attempt to create any directory');
+    });
 
-        // Mock the fs.mkdirSync method
-        fs.mkdirSync = jest.fn();
+    it('shows a warning when .devcontainer already exists', async () => {
+        sinon.stub(fs, 'existsSync').returns(true);
+        const warnStub = sinon.stub(vscode.window, 'showWarningMessage');
+        await perform();
+        assert.ok(warnStub.calledOnce, 'showWarningMessage should be called once');
+    });
 
-        // Mock the fs.writeFileSync method
-        fs.writeFileSync = jest.fn();
+    it('creates the .devcontainer directory and all required files when missing', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        const mkdirSyncStub = sinon.stub(fs, 'mkdirSync');
+        const writeFileSyncStub = sinon.stub(fs, 'writeFileSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
 
-        // Mock the yaml.dump method
-        yaml.dump = jest.fn().mockReturnValue('docker-compose-config-yml');
+        await perform();
 
-        // Call the setupDevContainer function
-        setupDevContainer();
+        assert.ok(mkdirSyncStub.calledOnce, '.devcontainer directory should be created');
+        // devcontainer.json, docker-compose.yml, Dockerfile, create-db-user.sql, backend.code-workspace
+        assert.ok(writeFileSyncStub.callCount >= 5, 'at least 5 files should be written');
+    });
 
-        // Assert that the vscode.window.showInformationMessage method was called with the correct message
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Setting up a Thecore 3 Devcontainer.');
+    it('shows an error message when directory creation throws', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync').throws(new Error('Permission denied'));
+        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 
-        // Assert that the vscode.window.showErrorMessage method was not called
-        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        await perform();
 
-        // Assert that the vscode.window.showInputBox method was called with the correct options
-        expect(vscode.window.showInputBox).toHaveBeenCalledWith({
-            placeHolder: 'Enter the name of the devcontainer, i.e. Thecore BE',
-            value: 'thecore-devcontainer'
-        });
+        assert.ok(errorStub.calledOnce, 'showErrorMessage should be called on error');
+        assert.ok(errorStub.firstCall.args[0].includes('Permission denied'));
+    });
 
-        // Assert that the fs.existsSync method was called with the correct path
-        expect(fs.existsSync).toHaveBeenCalledWith(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer'));
+    it('writes a valid devcontainer.json', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        const writeFileSyncStub = sinon.stub(fs, 'writeFileSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
 
-        // Assert that the fs.mkdirSync method was called
-        expect(fs.mkdirSync).toHaveBeenCalledWith(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer'));
+        await perform();
 
-        // Assert that the fs.writeFileSync method was called with the correct arguments for devcontainer.json
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
-            path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer', 'devcontainer.json'),
-            JSON.stringify({
-                "name": 'thecore-devcontainer',
-                "dockerComposeFile": "docker-compose.yml",
-                "service": "app",
-                "workspaceFolder": "/workspaces/project/backend/",
-                "customizations": {
-                    "vscode": {
-                        "extensions": [
-                            "Shopify.ruby-lsp"
-                            // ... other extensions
-                        ]
-                    }
-                },
-                "remoteUser": "vscode"
-            }, null, 4)
-        );
+        const devcontainerCall = writeFileSyncStub.args.find(([p]) => p.includes('devcontainer.json'));
+        assert.ok(devcontainerCall, 'devcontainer.json should be written');
+        const parsed = JSON.parse(devcontainerCall[1]);
+        assert.strictEqual(parsed.name, 'My Project');
+        assert.strictEqual(parsed.service, 'app');
+        assert.ok(Array.isArray(parsed.customizations.vscode.extensions));
+    });
 
-        // Assert that the fs.writeFileSync method was called with the correct arguments for docker-compose.yml
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
-            path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer', 'docker-compose.yml'),
-            'docker-compose-config-yml'
-        );
+    it('writes a Dockerfile with the expected base image', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        const writeFileSyncStub = sinon.stub(fs, 'writeFileSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
 
-        // Assert that the fs.writeFileSync method was called with the correct arguments for Dockerfile
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
-            path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer', 'Dockerfile'),
-            'FROM gabrieletassoni/vscode-devcontainers-thecore:3'
-        );
+        await perform();
 
-        // Assert that the fs.writeFileSync method was called with the correct arguments for create-db-user.sql
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
-            path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer', 'create-db-user.sql'),
-            'CREATE USER vscode CREATEDB;\nCREATE DATABASE vscode WITH OWNER vscode;\nGRANT ALL PRIVILEGES ON DATABASE vscode TO vscode;'
-        );
-
-        // Assert that the fs.writeFileSync method was called with the correct arguments for backend.code-workspace
-        expect(fs.writeFileSync).toHaveBeenCalledWith(
-            path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer', 'backend.code-workspace'),
-            JSON.stringify({
-                "folders": [
-                    {
-                        "path": ".."
-                    }
-                ],
-                "settings": {
-                    "files.associations": {
-                        "Gemfile": "gemfile"
-                    }
-                }
-            }, null, 4)
-        );
-
-        // Assert that the vscode.window.showWarningMessage method was not called
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        const dockerfileCall = writeFileSyncStub.args.find(([p]) => p.endsWith('Dockerfile'));
+        assert.ok(dockerfileCall, 'Dockerfile should be written');
+        assert.ok(dockerfileCall[1].includes('gabrieletassoni/vscode-devcontainers-thecore:3'));
     });
 });
