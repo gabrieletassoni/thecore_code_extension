@@ -11,54 +11,69 @@ function makeOutputChannel() {
 }
 
 describe('commands/createApp', () => {
-    let execShellStub, mkDirPStub, perform;
+    let execShellStub, mkDirPStub;
+    let workspaceExixtenceStub, workspaceEmptinessStub, commandExistenceStub, rubyOnRailsAppValidityStub;
+    let perform;
+
+    const FAKE_ROOT = '/fake/workspace';
 
     before(() => {
         execShellStub = sinon.stub();
         mkDirPStub = sinon.stub();
+        workspaceExixtenceStub = sinon.stub();
+        workspaceEmptinessStub = sinon.stub();
+        commandExistenceStub = sinon.stub();
+        rubyOnRailsAppValidityStub = sinon.stub();
         perform = proxyquire('../commands/createApp', {
             '../libs/os': { execShell: execShellStub, mkDirP: mkDirPStub },
+            '../libs/check': {
+                workspaceExixtence: workspaceExixtenceStub,
+                workspaceEmptiness: workspaceEmptinessStub,
+                commandExistence: commandExistenceStub,
+                rubyOnRailsAppValidity: rubyOnRailsAppValidityStub,
+            },
         }).perform;
     });
 
     beforeEach(() => {
-        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: FAKE_ROOT } }];
         sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
         execShellStub.reset();
         mkDirPStub.reset();
+        workspaceExixtenceStub.reset();
+        workspaceEmptinessStub.reset();
+        commandExistenceStub.reset();
+        rubyOnRailsAppValidityStub.reset();
+        // Default: all checks pass, workspace is empty and not yet a Rails app
+        workspaceExixtenceStub.returns(true);
+        workspaceEmptinessStub.returns(true);
+        commandExistenceStub.returns(true);
+        rubyOnRailsAppValidityStub.returns(false);
     });
 
     afterEach(() => sinon.restore());
 
     it('returns early when no workspace is open', async () => {
-        vscode.workspace.workspaceFolders = undefined;
+        workspaceExixtenceStub.returns(false);
         await perform();
         assert.ok(!execShellStub.called, 'no shell commands should run without a workspace');
     });
 
     it('returns early when workspace has more than one folder (not empty)', async () => {
-        vscode.workspace.workspaceFolders = [
-            { uri: { fsPath: '/ws1' } },
-            { uri: { fsPath: '/ws2' } },
-        ];
+        workspaceEmptinessStub.returns(false);
         await perform();
         assert.ok(!execShellStub.called);
     });
 
     it('returns early when workspace is already a Rails app', async () => {
-        // All RoR directories already exist → rubyOnRailsAppValidity returns dirs → early return
-        sinon.stub(fs, 'existsSync').returns(true);
-        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => true });
+        rubyOnRailsAppValidityStub.returns({ workspaceRoot: FAKE_ROOT, vendorDir: FAKE_ROOT + '/vendor' });
         await perform();
         assert.ok(!execShellStub.called);
     });
 
-    it('runs shell commands and shows success when creating a new app', async () => {
-        // workspace is empty: existsSync returns false for RoR dirs, true for Gemfile
-        sinon.stub(fs, 'existsSync').callsFake((p) => p.endsWith('Gemfile'));
-        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => false });
-        const gemfileContent = '# Gemfile\nsource "https://rubygems.org"\n';
-        sinon.stub(fs, 'readFileSync').returns(gemfileContent);
+    it('runs shell commands when creating a new app', async () => {
+        sinon.stub(fs, 'existsSync').callsFake((p) => p.endsWith('Gemfile') || p.endsWith('.dockerignore') === false);
+        sinon.stub(fs, 'readFileSync').returns('# Gemfile\n');
         sinon.stub(fs, 'writeFileSync');
         sinon.stub(fs, 'unlinkSync');
         execShellStub.resolves('');
@@ -70,7 +85,6 @@ describe('commands/createApp', () => {
 
     it('shows an error message when a shell command fails', async () => {
         sinon.stub(fs, 'existsSync').returns(false);
-        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => false });
         execShellStub.rejects(new Error('rails not found'));
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 

@@ -11,45 +11,68 @@ function makeOutputChannel() {
 }
 
 describe('commands/createATOM', () => {
-    let execShellStub, mkDirPStub, perform;
+    let execShellStub, mkDirPStub;
+    let workspaceExixtenceStub, commandExistenceStub, rubyOnRailsAppValidityStub, fileExistenceStub;
+    let perform;
+
+    const FAKE_ROOT = '/fake/workspace';
+    const ROR_DIRS = { workspaceRoot: FAKE_ROOT, vendorDir: FAKE_ROOT + '/vendor' };
 
     before(() => {
         execShellStub = sinon.stub();
         mkDirPStub = sinon.stub();
+        workspaceExixtenceStub = sinon.stub();
+        commandExistenceStub = sinon.stub();
+        rubyOnRailsAppValidityStub = sinon.stub();
+        fileExistenceStub = sinon.stub();
         perform = proxyquire('../commands/createATOM', {
             '../libs/os': { execShell: execShellStub, mkDirP: mkDirPStub },
+            '../libs/check': {
+                workspaceExixtence: workspaceExixtenceStub,
+                commandExistence: commandExistenceStub,
+                rubyOnRailsAppValidity: rubyOnRailsAppValidityStub,
+                fileExistence: fileExistenceStub,
+            },
         }).perform;
     });
 
     beforeEach(() => {
-        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: FAKE_ROOT } }];
         sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
         execShellStub.reset();
         mkDirPStub.reset();
+        workspaceExixtenceStub.reset();
+        commandExistenceStub.reset();
+        rubyOnRailsAppValidityStub.reset();
+        fileExistenceStub.reset();
+        // Default: all checks pass
+        workspaceExixtenceStub.returns(true);
+        rubyOnRailsAppValidityStub.returns(ROR_DIRS);
+        commandExistenceStub.returns(true);
+        fileExistenceStub.returns(true);
     });
 
     afterEach(() => sinon.restore());
 
     it('returns early when no workspace is open', async () => {
-        vscode.workspace.workspaceFolders = undefined;
+        workspaceExixtenceStub.returns(false);
         await perform();
         assert.ok(!execShellStub.called);
     });
 
     it('returns early when the workspace is not a Rails app', async () => {
-        sinon.stub(fs, 'existsSync').returns(false);
+        rubyOnRailsAppValidityStub.returns(false);
         await perform();
         assert.ok(!execShellStub.called);
     });
 
     it('returns early when vendor/submodules directory does not exist', async () => {
-        sinon.stub(fs, 'existsSync').callsFake((p) => !p.includes('submodules'));
+        fileExistenceStub.returns(false);
         await perform();
         assert.ok(!execShellStub.called);
     });
 
     it('returns early when user cancels submodule name input', async () => {
-        sinon.stub(fs, 'existsSync').returns(true);
         sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
         await perform();
@@ -57,7 +80,6 @@ describe('commands/createATOM', () => {
     });
 
     it('shows an error message when rails plugin new fails', async () => {
-        sinon.stub(fs, 'existsSync').returns(true);
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('My Atom')
             .resolves('some value');
@@ -70,27 +92,21 @@ describe('commands/createATOM', () => {
     });
 
     it('shows success after creating a new ATOM', async () => {
-        sinon.stub(fs, 'existsSync').returns(true);
         sinon.stub(fs, 'readFileSync').returns('# Gemfile\n');
         sinon.stub(fs, 'writeFileSync');
-        sinon.stub(fs, 'lstatSync').returns({ isDirectory: () => true });
+        mkDirPStub.returns(undefined);
         execShellStub.resolves('');
 
         sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('My Atom')     // submodule name
-            .onSecondCall().resolves('A summary')  // summary
-            .onThirdCall().resolves('A description') // description
-            .resolves('value');                    // author, email, url
+            .onFirstCall().resolves('My Atom')
+            .onSecondCall().resolves('A summary')
+            .onThirdCall().resolves('A description')
+            .resolves('author@example.com');
 
-        sinon.stub(vscode.window, 'showInformationMessage').resolves();
-        // stub additional showInputBox calls beyond 3
-        const infoStub = vscode.window.showInformationMessage;
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
         await perform();
 
-        // Either a success info message or no error is acceptable;
-        // the actual call path depends on all inputs resolving.
-        // We just verify no unexpected error was thrown.
-        assert.ok(true);
+        assert.ok(infoStub.called || execShellStub.called, 'should have proceeded past guards');
     });
 });

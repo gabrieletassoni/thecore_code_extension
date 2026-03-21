@@ -80,8 +80,9 @@ describe('commands/addMigration', () => {
             .onSecondCall().resolves('name:string');
         execShellStub.resolves(migrationOutput);
 
+        // Stub only renameSync to avoid touching the filesystem; let existsSync use
+        // the real implementation so isDir / hasGemspec work against the fixture.
         const renameSyncStub = sinon.stub(fs, 'renameSync');
-        const existsSyncStub = sinon.stub(fs, 'existsSync').returns(false);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
         await perform({ fsPath: ATOM_DIR });
