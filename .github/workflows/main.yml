@@ -1,12 +1,12 @@
-name: CI
+name: Publish to VS Code Marketplace
 
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,7 +16,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '14'
+        node-version: '20'
 
     - name: Install dependencies
       run: npm ci
@@ -24,24 +24,13 @@ jobs:
     - name: Package Extension
       run: npm run package
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create GitHub Release
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+        artifacts: "*.vsix"
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
+    - name: Publish to VS Code Marketplace
+      run: npm run deploy
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./thecore-3-helpers.vsix
-        asset_name: thecore-3-helpers.vsix
-        asset_content_type: application/octet-stream
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}

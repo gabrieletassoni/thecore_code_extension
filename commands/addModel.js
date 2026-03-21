@@ -4,20 +4,19 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { mkDirP, execShell } = require('../libs/os');
-const { isPascalCase, hasGemspec, workspaceExixtence, isDir } = require('../libs/check');
+const { isPascalCase, hasGemspec, workspaceExixtence, isDir, rubyOnRailsAppValidity } = require('../libs/check');
 const { writeTextFile } = require('../libs/configs');
 
 // The code you place here will be executed every time your command is executed
-async function perform(atomDir) {
-    if (!atomDir) {
-        vscode.window.showErrorMessage('Please right click on the ATOM folder and select Add Model.');
+async function perform(clickedDir) {
+    if (!clickedDir) {
+        vscode.window.showErrorMessage('Please right click on a folder and select Add Model.');
         return;
     }
 
     // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
     const outputChannel = vscode.window.createOutputChannel('Thecore: Add Model');
     outputChannel.show();
-    outputChannel.appendLine('Adding a model to the current ATOM.');
 
     // Check if we are inside a workspace
     if (!workspaceExixtence(outputChannel)) { return; }
@@ -26,28 +25,39 @@ async function perform(atomDir) {
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
     try {
-        // Check if The right clicked folder which sent this command is a valid submodule of the Thecore 3 app, being a valid ATOM, which means having a gemspec and db/migrate folder
-        outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
-        // Get only the full path without the file schema
-        atomDir = atomDir.fsPath;
-        if (!isDir(atomDir, outputChannel)) {return; }
-        
-        const atomName = path.basename(atomDir);
-        // Now I check if the gemspec file exists in one form or the other (with dashes or underscores) save in the atomGemspec variable the one that exists, returning in case none exists
-        if (!hasGemspec(atomDir, atomName, outputChannel)) { return; }
+        const dirPath = clickedDir.fsPath;
+        if (!isDir(dirPath, outputChannel)) { return; }
 
-        // Get the Migration from the user input and check if it's PascalCase, if it's not, show an error message and return
+        // Detect context: ATOM (parent folder is vendor/submodules) or main app
+        const parentPath = path.dirname(dirPath);
+        const isAtom = /[/\\]vendor[/\\]submodules$/.test(parentPath);
+        let targetDir;
+
+        if (isAtom) {
+            outputChannel.appendLine(`🔍 ATOM context detected: ${dirPath}`);
+            const atomName = path.basename(dirPath);
+            if (!hasGemspec(dirPath, atomName, outputChannel)) { return; }
+            targetDir = dirPath;
+        } else {
+            outputChannel.appendLine(`🔍 Main app context detected.`);
+            if (!rubyOnRailsAppValidity(false, outputChannel)) { return; }
+            targetDir = workspaceRoot;
+        }
+
+        // Get the model name from the user input and check if it's PascalCase
         const modelName = await vscode.window.showInputBox({
             ignoreFocusOut: true,
             prompt: 'Please enter the PascalCase name of the model.',
             validateInput: (modelName) => {
-                // Validates if the input exists and is snakecase
+                // Validates if the input exists and is PascalCase
                 if (!modelName || !isPascalCase(modelName)) {
                     return '❌ The PascalCase name is not valid. Please try again.';
                 }
                 return null;
             }
         });
+
+        if (!modelName) { return; }
 
         // Get the migration definition, it must be a list of fields with their types, like "name:string age:integer"
         const modelDefinition = await vscode.window.showInputBox({
@@ -61,67 +71,64 @@ async function perform(atomDir) {
                 return null;
             }
         });
-        
-        // Run the rails g migration command to create the migration file
-        const output = await execShell(`bundle install && rails g model "${modelName}" ${modelDefinition} --skip-test-framework`, workspaceRoot, outputChannel);
-        // Parse the output to check if the migration was created successfully, if it's the case, move all the created files into ${atomDir}/db/migrate folder
-        let migrationFiles = [];
-        if(output) {
-            migrationFiles = [...output.matchAll(/^\s+create\s+(db\/migrate\/.+\.rb)$/gm)];
-        } else {
+
+        // Run the rails g model command to create the migration and model files
+        const output = await execShell(`bundle install && rails g model "${modelName}" ${modelDefinition || ''} --skip-test-framework`, workspaceRoot, outputChannel);
+
+        if (!output) {
             const errorMessage = "No output from rails g command exists, cannot go on";
-            outputChannel.appendLine(`❌ ${errorMessage}, please inspect theoutput window.`);
+            outputChannel.appendLine(`❌ ${errorMessage}, please inspect the output window.`);
             vscode.window.showErrorMessage(`${errorMessage}, please inspect the output window.`);
             return;
         }
 
-        let modelFiles = [];
-        if(output) {
-            modelFiles = [...output.matchAll(/^\s+create\s+(app\/models\/.+\.rb)$/gm)];
-        } else {
-            const errorMessage = "No output from rails g command exists, cannot go on";
-            outputChannel.appendLine(`❌ ${errorMessage}, please inspect theoutput window.`);
-            vscode.window.showErrorMessage(`${errorMessage}, please inspect the output window.`);
-            return;
-        }
-        
-        if (!migrationFiles || !modelFiles) {
-            const errorMessage = "No output from rails g command matches evidence of migration or model file creation, cannot go on";
+        const migrationFiles = [...output.matchAll(/^\s+create\s+(db\/migrate\/.+\.rb)$/gm)];
+        const modelFiles = [...output.matchAll(/^\s+create\s+(app\/models\/.+\.rb)$/gm)];
+
+        if (!migrationFiles.length || !modelFiles.length) {
+            const errorMessage = "No evidence of migration or model file creation in rails g output, cannot go on";
             outputChannel.appendLine(`❌ ${errorMessage}, please inspect lines above.`);
             vscode.window.showErrorMessage(`${errorMessage}, please inspect output window.`);
             return;
-        } else {
-            // Migrations
-            migrationFiles.forEach(el => {
-                const migrationFilePath = path.join(workspaceRoot, el[1]);
-                const targetAtomDir = path.join(atomDir, 'db', 'migrate');
-                if (!fs.existsSync(targetAtomDir)) {
-                    outputChannel.appendLine(`📁 Creating the migrations folder: ${targetAtomDir}`);
-                    mkDirP(targetAtomDir,outputChannel);
-                }
-                outputChannel.appendLine(`📄 Moving the migration file to the migrations folder: ${migrationFilePath}`);
-                fs.renameSync(migrationFilePath, path.join(targetAtomDir, path.basename(migrationFilePath)));
-            });
-            // Models
-            modelFiles.forEach(el => {
-                const modelFilePath = path.join(workspaceRoot, el[1]);
-                const targetAtomDir = path.join(atomDir, 'app', 'models');
-                if (!fs.existsSync(targetAtomDir)) {
-                    outputChannel.appendLine(`📁 Creating the models folder: ${targetAtomDir}`);
-                    mkDirP(targetAtomDir,outputChannel);
-                }
-                outputChannel.appendLine(`📄 Moving the model file to the models folder: ${modelFilePath}`);
-                const modelFileBaseName = path.basename(modelFilePath);
-                const atomModelFile = path.join(targetAtomDir, modelFileBaseName);
-                fs.renameSync(modelFilePath, atomModelFile);
+        }
 
-                // Creating the concerns folders for Thecore standard way of adding content to the fat model
-                const apiDir = path.join(atomDir, 'app', 'models', 'concerns', 'api');
-                mkDirP(apiDir, outputChannel);
-                const railsAdminDir = path.join(atomDir, 'app', 'models', 'concerns', 'rails_admin');
-                mkDirP(railsAdminDir, outputChannel);
-                const endpointsDir = path.join(atomDir, 'app', 'models', 'concerns', 'endpoints');
-                mkDirP(endpointsDir, outputChannel);
+        // Handle migration files
+        migrationFiles.forEach(el => {
+            const migrationFilePath = path.join(workspaceRoot, el[1]);
+            if (isAtom) {
+                const targetMigrateDir = path.join(targetDir, 'db', 'migrate');
+                mkDirP(targetMigrateDir, outputChannel);
+                outputChannel.appendLine(`📄 Moving the migration file to: ${targetMigrateDir}`);
+                fs.renameSync(migrationFilePath, path.join(targetMigrateDir, path.basename(migrationFilePath)));
+            } else {
+                outputChannel.appendLine(`📄 Migration created at: ${migrationFilePath}`);
+            }
+        });
+
+        // Handle model files
+        modelFiles.forEach(el => {
+            const modelFilePath = path.join(workspaceRoot, el[1]);
+            const modelFileBaseName = path.basename(modelFilePath);
+            let finalModelFile;
+
+            if (isAtom) {
+                const targetModelDir = path.join(targetDir, 'app', 'models');
+                mkDirP(targetModelDir, outputChannel);
+                outputChannel.appendLine(`📄 Moving the model file to: ${targetModelDir}`);
+                finalModelFile = path.join(targetModelDir, modelFileBaseName);
+                fs.renameSync(modelFilePath, finalModelFile);
+            } else {
+                finalModelFile = modelFilePath;
+                outputChannel.appendLine(`📄 Model created at: ${finalModelFile}`);
+            }
+
+            // Create the concerns folders for Thecore standard way of adding content to the fat model
+            const apiDir = path.join(targetDir, 'app', 'models', 'concerns', 'api');
+            mkDirP(apiDir, outputChannel);
+            const railsAdminDir = path.join(targetDir, 'app', 'models', 'concerns', 'rails_admin');
+            mkDirP(railsAdminDir, outputChannel);
+            const endpointsDir = path.join(targetDir, 'app', 'models', 'concerns', 'endpoints');
+            mkDirP(endpointsDir, outputChannel);
 
                 const apiContent = [
                     `module Api::${modelName}`,
@@ -247,24 +254,20 @@ async function perform(atomDir) {
                     `  include Api::${modelName}`,
                     `  include RailsAdmin::${modelName}`
                 ];
-                
-                const modelFileContent = fs.readFileSync(atomModelFile, 'utf8');
 
+                const modelFileContent = fs.readFileSync(finalModelFile, 'utf8');
                 const includeLine = `include ${modelName}`;
-                const includeLinesExist = modelFileContent.includes(includeLine);
 
-                if (!includeLinesExist) {
+                if (!modelFileContent.includes(includeLine)) {
                     const updatedModelFileContent = modelFileContent.replace(
                         / < ApplicationRecord/,
                         ` < ApplicationRecord\n${concernIncluders.join('\n')}`
                     );
-
-                    fs.writeFileSync(atomModelFile, updatedModelFileContent, 'utf8');
+                    fs.writeFileSync(finalModelFile, updatedModelFileContent, 'utf8');
                     outputChannel.appendLine(`✅ Modified the ${modelName} RB file adding the concern's includes.`);
                 }
-                
-            });
-        }
+        });
+
 
         // The command executed successfully, show a success message
         outputChannel.appendLine(`✅ The model ${modelName} has been added successfully.`);
