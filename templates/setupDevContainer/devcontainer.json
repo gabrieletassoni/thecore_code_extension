@@ -1,0 +1,37 @@
+{
+    "name": "{{name}}",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/project/backend/",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                "esbenp.prettier-vscode",
+                "dbaeumer.vscode-eslint",
+                "github.github-vscode-theme",
+                "henriiik.vscode-sort",
+                "karunamurti.haml",
+                "iciclesoft.workspacesort",
+                "howardzuo.vscode-git-tags",
+                "shakram02.bash-beautify",
+                "rogalmic.bash-debug",
+                "bung87.rails",
+                "redhat.vscode-yaml",
+                "funkyremi.vscode-google-translate",
+                "mohd-akram.vscode-html-format",
+                "lewisardern.semgrep-snippets",
+                "eamodio.gitlens",
+                "donjayamanne.githistory",
+                "aliariff.vscode-erb-beautify",
+                "GrapeCity.gc-excelviewer",
+                "jnbt.vscode-rufo",
+                "anweber.vscode-httpyac",
+                "mhutchie.git-graph",
+                "Shopify.ruby-lsp",
+                "/etc/thecore/thecore.vsix"
+            ]
+        }
+    },
+    "remoteUser": "vscode"
+}
