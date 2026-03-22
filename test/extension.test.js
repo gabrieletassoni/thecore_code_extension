@@ -1,15 +1,65 @@
+'use strict';
+
 const assert = require('assert');
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
+const sinon = require('sinon');
 const vscode = require('vscode');
-// const myExtension = require('../extension');
+const extension = require('../extension');
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+describe('Extension', () => {
+    let registeredCommands;
 
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
-	});
+    beforeEach(() => {
+        registeredCommands = [];
+        sinon.stub(vscode.commands, 'registerCommand').callsFake((id) => {
+            registeredCommands.push(id);
+            return { dispose: () => {} };
+        });
+    });
+
+    afterEach(() => sinon.restore());
+
+    // ── activate ──────────────────────────────────────────────────────────────
+
+    describe('activate', () => {
+        const EXPECTED_COMMANDS = [
+            'thecore.setupDevcontainer',
+            'thecore.createApp',
+            'thecore.createATOM',
+            'thecore.addRootAction',
+            'thecore.addMemberAction',
+            'thecore.addMigration',
+            'thecore.addModel',
+        ];
+
+        it('registers all expected commands', () => {
+            const context = { subscriptions: [] };
+            extension.activate(context);
+
+            for (const cmd of EXPECTED_COMMANDS) {
+                assert.ok(
+                    registeredCommands.includes(cmd),
+                    `Command "${cmd}" was not registered`
+                );
+            }
+        });
+
+        it('pushes each registered command into context.subscriptions', () => {
+            const context = { subscriptions: [] };
+            extension.activate(context);
+            assert.ok(context.subscriptions.length > 0, 'subscriptions should not be empty');
+            assert.strictEqual(
+                context.subscriptions.length,
+                EXPECTED_COMMANDS.length,
+                'one subscription per command'
+            );
+        });
+    });
+
+    // ── deactivate ────────────────────────────────────────────────────────────
+
+    describe('deactivate', () => {
+        it('runs without throwing', () => {
+            assert.doesNotThrow(() => extension.deactivate());
+        });
+    });
 });

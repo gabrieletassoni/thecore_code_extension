@@ -8,6 +8,11 @@ const vscode = require('vscode');
 /**
  * @param {vscode.ExtensionContext} context
  */
+/**
+ * Activates the extension.
+ * 
+ * @param {vscode.ExtensionContext} context - The extension context.
+ */
 function activate(context) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
@@ -18,29 +23,48 @@ function activate(context) {
 	// Now provide the implementation of the command with  registerCommand
 	// The commandId parameter must match the command field in package.json
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.setupDevcontainer', function () {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Setting up a Thecore 3 Devcontainer.');
+		// Call the business logic which is present into the commands directory in the setupDevContainer.js file
+		require('./commands/setupDevContainer').perform();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('thecore.createApp', function () {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Creating a Thecore 3 App.');
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/createApp').perform();
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
-		// The code you place here will be executed every time your command is executed
+	// context.subscriptions.push(vscode.commands.registerCommand('thecore.releaseApp', function () {
+	// 	// Call the business logic which is present into the commands directory in the createApp.js file
+	// 	require('./commands/releaseApp').perform();
+	// }));
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Releasing this Thecore 3 App.');
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.createATOM', function () {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/createATOM').perform();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addRootAction', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addRootAction').perform(folder);
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMemberAction', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addMemberAction').perform(folder);
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addMigration', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addMigration').perform(folder);
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('thecore.addModel', async (folder) => {
+		// Call the business logic which is present into the commands directory in the createApp.js file
+		require('./commands/addModel').perform(folder);
 	}));
 }
 
 // This method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
 	activate,

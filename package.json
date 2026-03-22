@@ -2,39 +2,121 @@
   "name": "thecore",
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
-  "version": "0.0.1",
+  "publisher": "gabrieletassoni",
+  "version": "3.0.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gabrieletassoni/thecore_code_extension"
+  },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.85.0",
+    "node": ">=18"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [],
-  "main": "./extension.js",
+  "main": "./out/main.js",
   "contributes": {
-    "commands": [{
-      "command": "thecore.setupDevcontainer",
-      "title": "Thecore 3: Setup Devcontainer"
-    },{
-      "command": "thecore.createApp",
-      "title": "Thecore 3: Create an App"
-    },{
-      "command": "thecore.releaseApp",
-      "title": "Thecore 3: Release this App"
-    }]
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "thecore.setupDevcontainer",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+        },
+        {
+          "command": "thecore.createApp",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+        },
+        {
+          "command": "thecore.createATOM",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+        },
+        {
+          "command": "thecore.addModel",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+        },
+        {
+          "command": "thecore.addRootAction",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+        },
+        {
+          "command": "thecore.addMemberAction",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+        },
+        {
+          "command": "thecore.addMigration",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+        },
+        {
+          "command": "thecore.addModel",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "thecore.setupDevcontainer",
+        "title": "Thecore 3: Setup Devcontainer"
+      },
+      {
+        "command": "thecore.createApp",
+        "title": "Thecore 3: Create an App"
+      },
+      {
+        "command": "thecore.createATOM",
+        "title": "Thecore 3: Create an ATOM"
+      },
+      {
+        "command": "thecore.addRootAction",
+        "title": "Thecore 3: Add a Root Action"
+      },
+      {
+        "command": "thecore.addMemberAction",
+        "title": "Thecore 3: Add a Member Action"
+      },
+      {
+        "command": "thecore.addMigration",
+        "title": "Thecore 3: Add a DB Migration"
+      },
+      {
+        "command": "thecore.addModel",
+        "title": "Thecore 3: Add a Model"
+      }
+    ]
   },
+  "license": "MIT",
+  "icon": "assets/logo.png",
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "yarn run lint",
-    "test": "vscode-test"
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
+    "esbuild-base": "rimraf out && esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "build": "npm run -S esbuild-base -- --sourcemap",
+    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
+    "package": "vsce package",
+    "deploy": "vsce publish",
+    "fmt": "prettier --write \"src/**/*.ts\" && npm run test -- --fix",
+    "test": "mocha",
+    "test:vscode": "vscode-test",
+    "lint": "eslint . --ext js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8"
+    "@types/vscode": "^1.85.0",
+    "@vscode/dts": "^0.4.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^8.57.1",
+    "mocha": "^10.8.2",
+    "prettier": "^3.3.3",
+    "proxyquire": "^2.1.3",
+    "rimraf": "^5.0.0",
+    "sinon": "^19.0.5"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21"
   }
 }
