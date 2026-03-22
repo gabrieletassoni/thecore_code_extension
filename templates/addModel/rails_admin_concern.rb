@@ -4,7 +4,7 @@ module RailsAdmin::{{modelName}}
   included do
     rails_admin do
       navigation_label I18n.t('admin.registries.label')
-      navigation_icon 'fa fa-file'
+      navigation_icon 'fa fa-file' # TODO: customize icon, see https://fontawesome.com/v5/search
     end
   end
 end

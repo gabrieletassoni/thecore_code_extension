@@ -1,16 +1,19 @@
 RailsAdmin::Config::Actions.add_action "{{actionName}}", :base, :member do
     link_icon 'fas fa-file'
     http_methods [:get, :patch]
-    # Visible only for the User model
-    visible do
-        bindings[:object].is_a?(::User)
-    end
+    # Customize visibility: show this action only for specific models.
+    # Example: visible only for the User model:
+    # visible do
+    #   bindings[:object].is_a?(::User)
+    # end
+    # Or use the default authorization check:
+    visible? authorized?
     # Adding the controller which is needed to compute calls from the ui
     controller do
         proc do
             # if it's a form submission, then update the password
             if !request.xhr? && request.patch?
-                flash[:success] = I18n.t("Succesfully clicked on sample action")
+                flash[:success] = I18n.t("Successfully clicked on sample action")
                 # Redirect to the object
                 redirect_to index_path(model_name: @abstract_model.to_param)
             elsif request.xhr? && request.get?
