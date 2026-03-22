@@ -2,11 +2,11 @@ RailsAdmin::Config::Actions.add_action "{{actionName}}", :base, :root do
     show_in_sidebar true
     show_in_navigation false
     breadcrumb_parent [nil]
-    # This ensures the action only shows up for Users
-    # visible? authorized?
+    # This ensures the action only shows up for authorized users
+    visible? authorized?
     # Not a member action
     member false
-    # Not a colleciton action
+    # Not a collection action
     collection false
     # Have a look at https://fontawesome.com/v5/search for available icons
     link_icon 'fas fa-file'
@@ -22,8 +22,11 @@ RailsAdmin::Config::Actions.add_action "{{actionName}}", :base, :root do
                 # and instance variables
                 status = 200
                 message = "Hello World!"
+                # Note: ActivityLogChannel is expected to re-broadcast messages from the "messages" channel
                 ActionCable.server.broadcast("messages", { topic: :{{actionName}}, status: status, message: message})
                 render json: {message: message}.to_json, status: status
+            else
+                # Renders the action.html.erb view for browser requests (HTML format)
             end
         end
     end

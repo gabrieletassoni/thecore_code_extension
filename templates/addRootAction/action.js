@@ -16,17 +16,19 @@ if (typeof {{actionNameCamelCase}}Function !== 'function') {
                received(data) {
                    if(data["topic"] == "{{actionName}}") {
                        console.log("{{actionName}}", data);
-                       $("#response").html(data["message"])
+                       document.getElementById('{{actionName}}-response').innerHTML = data["message"];
                    }
                }
            });
         }
         // Send a message to the server
         {{actionNameCamelCase}}Cable.send({ message: '{{actionName}} Client is sending a message', topic: "{{actionName}}", namespace: "subscriptions" });
-        // Using plain Javascript, attach to the button with ID {{actionName}}-id a click event listener which sends to the server an xhr get request and alerts the response
+        // Attach a click event listener to the button which sends a fetch GET request and shows the response.
+        // The URL is read from the data-url attribute to avoid ERB interpolation in plain .js files.
         document.getElementById('{{actionName}}-id').addEventListener('click', function() {
+            var url = this.dataset.url;
             document.getElementById('{{actionName}}-loader').classList.remove('d-none');
-            fetch("#{rails_admin.{{actionName}}_path}", { headers: { 'Accept': 'application/json' } })
+            fetch(url, { headers: { 'Accept': 'application/json' } })
             .then(response => response.json())
             .then(data => {
                 console.log(data);
@@ -37,4 +39,4 @@ if (typeof {{actionNameCamelCase}}Function !== 'function') {
     }
 }
 // Attach the function to the eventListener
-document.addEventListener('turbo:load', {{actionNameCamelCase}}Function)});
+document.addEventListener('turbo:load', {{actionNameCamelCase}}Function);

@@ -1,5 +1,5 @@
 <%= stylesheet_link_tag 'rails_admin/actions/{{actionName}}' %>
-<%= form_with(url: {{actionName}}_path, html: { method: :patch }, class: "main", id: "{{actionName}}-id") do |f| %>
+<%= form_with(url: {{actionName}}_path, html: { method: :patch }, class: "main", id: "{{actionName}}-form") do |f| %>
     <div class="form-actions row justify-content-end my-3">
         <div class="col-sm-10">
             <input name="return_to" type="hidden" value="<%=edit_path(@abstract_model, @object.id)%>">
@@ -11,6 +11,6 @@
     </div>
 <% end %>
 <!-- The button to test the xhr get request -->
-<button id="{{actionName}}-id" class="btn btn-primary">Test {{actionName}}</button>
+<button id="{{actionName}}-id" class="btn btn-primary" data-url="<%= rails_admin.{{actionName}}_path %>">Test {{actionName}}</button>
 <div id="{{actionName}}-response"></div>
 <%= javascript_include_tag "rails_admin/actions/{{actionName}}" %>
