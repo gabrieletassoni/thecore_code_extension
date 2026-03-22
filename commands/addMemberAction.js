@@ -4,6 +4,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { writeTextFile, mergeYmlContent } = require('../libs/configs');
+const { renderTemplate } = require('../libs/templates');
 const { mkDirP } = require('../libs/os');
 const { hasGemspec, workspaceExixtence, isDir } = require('../libs/check');
 
@@ -61,55 +62,14 @@ async function perform(atomDir) {
         // Create a title case verson of the snake case memberActionName
         const memberActionNameSnakeCase = memberActionName.toLowerCase().replace(/[-_][a-z0-9]/g, (group) => group.slice(-1).toUpperCase());;
 
-        // Create the member Action file with the following content, replacing tcp_debug with the member Action name and using an array of strings to represent it, joind by a newline:
-        const memberActionContent = [
-            `RailsAdmin::Config::Actions.add_action "${memberActionName}", :base, :member do`,
-            `    link_icon 'fas fa-file'`,
-            `    http_methods [:get, :patch]`,
-            `    # Visible only for the User model`,
-            `    visible do`,
-            `        bindings[:object].is_a?(::User)`,
-            `    end`,
-            `    # Adding the controller which is needed to compute calls from the ui`,
-            `    controller do`,
-            `        proc do`,
-            `            # if it's a form submission, then update the password`,
-            `            if !request.xhr? && request.patch?`,
-            `                flash[:success] = I18n.t("Succesfully clicked on sample action")`,
-            `                # Redirect to the object`,
-            `                redirect_to index_path(model_name: @abstract_model.to_param)`,
-            `            elsif request.xhr? && request.get?`,
-            `                # Return a json response`,
-            `                render json: { message: "Hello from ${memberActionName}" }, status: :ok`,
-            `            end`,
-            `        end`,
-            `    end`,
-            `end`,
-        ];
+        // Create the member action file from template
+        const memberActionContent = renderTemplate('addMemberAction/action.rb', { actionName: memberActionName });
         writeTextFile(atomMemberActionsDir, `${memberActionName}.rb`, memberActionContent, outputChannel);
 
-        // Using the same logic, add a file in app/views/rails_admin/main with the following content, creating the folders if they do not exists.
-        // Add also a button to send am xhr get request and alert with the result.
+        // Add a file in app/views/rails_admin/main from template
         const mainViewDir = path.join(atomDir, "app", 'views', 'rails_admin', 'main');
         mkDirP(mainViewDir, outputChannel);
-        const mainViewContent = [
-            `<%= stylesheet_link_tag 'rails_admin/actions/${memberActionName}' %>`,
-            `<%= form_with(url: ${memberActionName}_path, html: { method: :patch }, class: "main", id: "${memberActionName}-id") do |f| %>`,
-            `    <div class="form-actions row justify-content-end my-3">`,
-            `        <div class="col-sm-10">`,
-            `            <input name="return_to" type="hidden" value="<%=edit_path(@abstract_model, @object.id)%>">`,
-            `            <button class="btn btn-primary" data-disable-with="Save" name="_save" type="submit">`,
-            `            <i class="fas fa-check"></i>`,
-            `            Test`,
-            `            </button>`,
-            `        </div>`,
-            `    </div>`,
-            `<% end %>`,
-            `<!-- The button to test the xhr get request -->`,
-            `<button id="${memberActionName}-id" class="btn btn-primary">Test ${memberActionName}</button>`,
-            `<div id="${memberActionName}-response"></div>`,
-            `<%= javascript_include_tag "rails_admin/actions/${memberActionName}" %>`,
-        ];
+        const mainViewContent = renderTemplate('addMemberAction/action.html.erb', { actionName: memberActionName });
         writeTextFile(mainViewDir, `${memberActionName}.html.erb`, mainViewContent, outputChannel);
 
         // Add the member action to the rails_admin initializer, if not already present, into after_initialize.rb file
@@ -139,109 +99,12 @@ async function perform(atomDir) {
             outputChannel.appendLine(`The member action assets precompile line is already present in the ${assetsFile} file.`);
         }
 
-        // Add to app/assets/stylesheets/rails_admin/actions/tcp_debug.scss the following line, replacing tcp_debug with the member action name
-        // .tcp-debug { background-color: #f00; }
-        const mainScssContent = [
-            `// Spinner`,
-            `.loader {`,
-            `    width: 40px;`,
-            `    height: 40px;`,
-            `    position: relative;`,
-            `    margin: 0 auto;`,
-            `}`,
-            `.double-bounce1,`,
-            `.double-bounce2 {`,
-            `    width: 100%;`,
-            `    height: 100%;`,
-            `    border-radius: 50%;`,
-            `    background-color: #333;`,
-            `    opacity: 0.6;`,
-            `    position: absolute;`,
-            `    top: 0;`,
-            `    left: 0;`,
-            `    -webkit-animation: sk-bounce 2.0s infinite ease-in-out;`,
-            `    animation: sk-bounce 2.0s infinite ease-in-out;`,
-            `}`,
-            `.double-bounce2 {`,
-            `    -webkit-animation-delay: -1.0s;`,
-            `    animation-delay: -1.0s;`,
-            `}`,
-            `@-webkit-keyframes sk-bounce {`,
-            `    0%,`,
-            `    100% {`,
-            `        -webkit-transform: scale(0.0)`,
-            `    }`,
-            `    50% {`,
-            `        -webkit-transform: scale(1.0)`,
-            `    }`,
-            `}`,
-            `@keyframes sk-bounce {`,
-            `    0%,`,
-            `    100% {`,
-            `        transform: scale(0.0);`,
-            `        -webkit-transform: scale(0.0);`,
-            `    }`,
-            `    50% {`,
-            `        transform: scale(1.0);`,
-            `        -webkit-transform: scale(1.0);`,
-            `    }`,
-            `}`,
-            `// End Spinner`,
-            `#${memberActionName}-response {`,
-            `    border-radius: 1em;`,
-            `    display: flex;`,
-            `    flex-direction: column;`,
-            `    justify-content: center;`,
-            `}`,
-        ];
+        // Add the SCSS file from shared template
+        const mainScssContent = renderTemplate('shared/action.scss', { actionName: memberActionName });
         writeTextFile(path.join(atomDir, 'app', 'assets', 'stylesheets', 'rails_admin', 'actions'), `${memberActionName}.scss`, mainScssContent, outputChannel);
 
-        // Add to vendor/submodules/thecore_tcp_debug/app/assets/javascripts/main_tcp_debug.js the following line, replacing tcp_debug with the member action name
-        // The content above to the main_js_file:
-        const mainJsContent = [
-            `var ${memberActionNameSnakeCase}Cable = null;`,
-            `// If the ${memberActionNameSnakeCase}Function is already defined, then don't redefine it and don't attach it to the eventListener`,
-            `if (typeof ${memberActionNameSnakeCase}Function !== 'function') {`,
-            `    function ${memberActionNameSnakeCase}Function(event) {`,
-            `        console.log('Hello from ${memberActionName}', event);`,
-            `        // Action Cable WebSocket connection only if ${memberActionNameSnakeCase}Cable is not already defined and valid`,
-            `        if (typeof ${memberActionNameSnakeCase}Cable !== 'object' || ${memberActionNameSnakeCase}Cable === null) {`,
-            `            ${memberActionNameSnakeCase}Cable = App.cable.subscriptions.create("ActivityLogChannel", {`,
-            `               connected() {`,
-            `                   console.log("Connected to the channel:", this);`,
-            `                   this.send({ message: '${memberActionName} Client is connected', topic: "${memberActionName}", namespace: "subscriptions" });`,
-            `               },`,
-            `               disconnected() {`,
-            `                   console.log("${memberActionName} Client Disconnected");`,
-            `               },`,
-            `               received(data) {`,
-            `                   if(data["topic"] == "${memberActionName}") {`,
-            `                       console.log("${memberActionName}", data);`,
-            `                       $("#response").html(data["message"])`,
-            `                   }`,
-            `               }`,
-            `           });`,
-            `        }`,
-            `        // Send a message to the server`,
-            `        ${memberActionNameSnakeCase}Cable.send({ message: '${memberActionName} Client is sending a message', topic: "${memberActionName}", namespace: "subscriptions" });`,
-            `        // Using plain Javascript, attach to the button with ID ${memberActionName}-id a click event listener which sends to the server an xhr get request and alerts the response`,
-            `        document.getElementById('${memberActionName}-id').addEventListener('click', function() {`,
-            `            var xhr = new XMLHttpRequest();`,
-            `            xhr.open('GET', "#{rails_admin.send('${memberActionName}_path')}", true);`,
-            `            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');`,
-            `            xhr.onreadystatechange = function() {`,
-            `                if (xhr.readyState == 4 && xhr.status == 200) {`,
-            `                    var response = JSON.parse(xhr.responseText);`,
-            `                    document.getElementById('${memberActionName}-response').innerHTML = response.message;`,
-            `                }`,
-            `            }`,
-            `            xhr.send();`,
-            `        });`,
-            `    }`,
-            `}`,
-            `// Attach the function to the eventListener`,
-            `document.addEventListener('turbo:load', ${memberActionNameSnakeCase}Function)});`,
-        ];
+        // Add the JavaScript file from template
+        const mainJsContent = renderTemplate('addMemberAction/action.js', { actionName: memberActionName, actionNameCamelCase: memberActionNameSnakeCase });
         writeTextFile(path.join(atomDir, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'), `${memberActionName}.js`, mainJsContent, outputChannel);
 
         // Create a title case verson of the snake case memberActionName

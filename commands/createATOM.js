@@ -5,6 +5,7 @@ const path = require('path');
 const { commandExistence, workspaceExixtence, rubyOnRailsAppValidity, fileExistence } = require('../libs/check');
 const { execShell, mkDirP } = require('../libs/os');
 const { createGitignoreFile, writeTextFile, writeYAMLFile } = require('../libs/configs');
+const { renderTemplate } = require('../libs/templates');
 const { snakeToClassName } = require('../libs/helpers');
 
 // The code you place here will be executed every time your command is executed
@@ -196,56 +197,20 @@ function createThecoreFolders(submodulesDir, submoduleNameSnakeCase, outputChann
 function addInitializers(submodulesDir, submoduleNameSnakeCase, outputChannel) {
     const configInitializersDir = path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'initializers');
 
-    // After initialize
-    const afterInitializeTxt = [
-        "Rails.application.configure do",
-        "    config.after_initialize do",
-        "        # For example, it can be used to load a root action defined in lib, for example:",
-        "        # require 'root_actions/tcp_debug'",
-        "    end",
-        "end"
-    ];
-    writeTextFile(configInitializersDir, 'after_initialize.rb', afterInitializeTxt, outputChannel);
+    writeTextFile(configInitializersDir, 'after_initialize.rb', renderTemplate('createATOM/after_initialize.rb'), outputChannel);
 
     // Add to db migration
     const addToDbMigrationTxt = `Rails.application.config.paths['db/migrate'] << File.expand_path("../../db/migrate", __dir__)`;
     writeTextFile(configInitializersDir, 'add_to_db_migration.rb', addToDbMigrationTxt, outputChannel);
 
-    // Add to assets load path
-    const assetsTxt = [
-        "# PLEASE, uncomment if needed.",
-        "# For Example: in the case there's a root action called tcp_debug, add the following lines to include css and javascripts for auto loading:",
-        "# Rails.application.config.assets.precompile += %w(",
-        "#   main_tcp_debug.js",
-        "#   main_tcp_debug.css",
-        "# )"
-    ];
-    writeTextFile(configInitializersDir, 'assets.rb', assetsTxt, outputChannel);
-
-    // Abiliites File
-    const abilitiesTxt = [
-        "module Abilities",
-        `    class ${snakeToClassName(submoduleNameSnakeCase)}`,
-        "        include CanCan::Ability",
-        "        def initialize user",
-        "            if user.present?",
-        "                # Users' abilities",
-        "                if user.admin?",
-        "                    # Admins' abilities",
-        "                end",
-        "            end",
-        "        end",
-        "    end",
-        "end"
-    ];
-    writeTextFile(configInitializersDir, 'abilities.rb', abilitiesTxt, outputChannel);
+    writeTextFile(configInitializersDir, 'assets.rb', renderTemplate('createATOM/assets.rb'), outputChannel);
+    writeTextFile(configInitializersDir, 'abilities.rb', renderTemplate('createATOM/abilities.rb', { className: snakeToClassName(submoduleNameSnakeCase) }), outputChannel);
 
 }
 
 function addDBFiles(submodulesDir, submoduleNameSnakeCase, outputChannel) {
     const dbDir = path.join(submodulesDir, submoduleNameSnakeCase, 'db');
-    const seedsTxt = `puts "Seeding Data into DB from ${submoduleNameSnakeCase}"`;
-    writeTextFile(dbDir, 'seeds.rb', seedsTxt, outputChannel);
+    writeTextFile(dbDir, 'seeds.rb', renderTemplate('createATOM/seeds.rb', { submoduleNameSnakeCase }), outputChannel);
 }
 
 function addLocaleFiles(submodulesDir, submoduleNameSnakeCase, outputChannel) {

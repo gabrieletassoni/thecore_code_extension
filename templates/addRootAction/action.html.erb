@@ -1,0 +1,13 @@
+<%= stylesheet_link_tag 'rails_admin/actions/{{actionName}}' %>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="response {{actionName}}-response" id="{{actionName}}-response">
+    </div>
+    <div class="loader" id="{{actionName}}-loader">
+      <div class="double-bounce1"></div>
+      <div class="double-bounce2"></div>
+    </div>
+  </div>
+</div>
+<button class="btn btn-primary" id="{{actionName}}-id">Click me</button>
+<%= javascript_include_tag "rails_admin/actions/{{actionName}}" %>

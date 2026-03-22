@@ -6,6 +6,7 @@ const path = require('path');
 const { mkDirP, execShell } = require('../libs/os');
 const { isPascalCase, hasGemspec, workspaceExixtence, isDir, rubyOnRailsAppValidity } = require('../libs/check');
 const { writeTextFile } = require('../libs/configs');
+const { renderTemplate } = require('../libs/templates');
 
 // The code you place here will be executed every time your command is executed
 async function perform(clickedDir) {
@@ -130,124 +131,9 @@ async function perform(clickedDir) {
             const endpointsDir = path.join(targetDir, 'app', 'models', 'concerns', 'endpoints');
             mkDirP(endpointsDir, outputChannel);
 
-                const apiContent = [
-                    `module Api::${modelName}`,
-                    `  extend ActiveSupport::Concern`,
-                    ``,
-                    `  included do`,
-                    `    # Use self.json_attrs to drive json rendering for `,
-                    `    # API model responses (index, show and update ones).`,
-                    `    # For reference:`,
-                    `    # https://api.rubyonrails.org/classes/ActiveModel/Serializers/JSON.html`,
-                    `    # The object passed accepts only these keys:`,
-                    `    # - only: list [] of model fields to be shown in JSON serialization`,
-                    `    # - except: exclude these fields from the JSON serialization, is a list []`,
-                    `    # - methods: include the result of some method defined in the model`,
-                    `    # - include: include associated models, it's an object {} which also accepts the keys described here`,
-                    `    cattr_accessor :json_attrs`,
-                    `    self.json_attrs = ::ModelDrivenApi.smart_merge (json_attrs || {}), {}`,
-                    ``,
-                    `    # Custom action callable by the API must be defined in /app/models/concerns/endpoints/`,
-                    `  end`,
-                    `end`
-                ];
-                writeTextFile(apiDir, modelFileBaseName, apiContent, outputChannel);
-
-                const railsAdminContent = [
-                    `module RailsAdmin::${modelName}`,
-                    `  extend ActiveSupport::Concern`,
-                    ``,
-                    `  included do`,
-                    `    rails_admin do`,
-                    `      navigation_label I18n.t('admin.registries.label')`,
-                    `      navigation_icon 'fa fa-file'`,
-                    `    end`,
-                    `  end`,
-                    `end`
-                ];
-                writeTextFile(railsAdminDir, modelFileBaseName, railsAdminContent, outputChannel);
-
-                const endpointsContent = [
-                    `class Endpoints::${modelName} < NonCrudEndpoints`,
-                    `  # self.desc '${modelName}', :test, {`,
-                    `  #   # Define the action name using openapi swagger format`,
-                    `  #   get: {`,
-                    `  #     summary: "Test API Custom Action",`,
-                    `  #     description: "This is a test API custom action",`,
-                    `  #     operationId: "test",`,
-                    `  #     tags: ["Test"],`,
-                    `  #     parameters: [`,
-                    `  #       {`,
-                    `  #         name: "explain",`,
-                    `  #         in: "query",`,
-                    `  #         description: "Explain the action by returning this openapi schema",`,
-                    `  #         required: true,`,
-                    `  #         schema: {`,
-                    `  #           type: "boolean"`,
-                    `  #         }`,
-                    `  #       }`,
-                    `  #     ],`,
-                    `  #     responses: {`,
-                    `  #       200 => {`,
-                    `  #         description: "The openAPI json schema for this action",`,
-                    `  #         content: {`,
-                    `  #           "application/json": {`,
-                    `  #             schema: {`,
-                    `  #               type: "object",`,
-                    `  #               additionalProperties: true`,
-                    `  #             }`,
-                    `  #           }`,
-                    `  #         }`,
-                    `  #       },`,
-                    `  #       501 => {`,
-                    `  #         error: :string,`,
-                    `  #       }`,
-                    `  #     }`,
-                    `  #   },`,
-                    `  #   post: {`,
-                    `  #     summary: "Test API Custom Action",`,
-                    `  #     description: "This is a test API custom action",`,
-                    `  #     operationId: "test",`,
-                    `  #     tags: ["Test"],`,
-                    `  #     requestBody: {`,
-                    `  #       required: true,`,
-                    `  #       content: {`,
-                    `  #         "application/json": {}`,
-                    `  #       }`,
-                    `  #     },`,
-                    `  #     responses: {`,
-                    `  #       200 => {`,
-                    `  #         description: "The openAPI json schema for this action",`,
-                    `  #         # This will return the object with a message string and a params object`,
-                    `  #         content: {`,
-                    `  #           "application/json": {`,
-                    `  #             schema: {`,
-                    `  #               type: "object",`,
-                    `  #               properties: {`,
-                    `  #                 message: {`,
-                    `  #                   type: "string"`,
-                    `  #                 },`,
-                    `  #                 params: {`,
-                    `  #                   type: "object",`,
-                    `  #                   additionalProperties: true`,
-                    `  #                 }`,
-                    `  #               }`,
-                    `  #             }`,
-                    `  #           }`,
-                    `  #         }`,
-                    `  #       },`,
-                    `  #       501 => {`,
-                    `  #         error: :string,`,
-                    `  #       }`,
-                    `  #     }`,
-                    `  #   }`,
-                    `  # }`,
-                    `  # def test(params)`,
-                    `  #   return { message: "Hello World From Test API Custom Action called test", params: params }, 200`,
-                    `  # end`,
-                    `end`
-                ];
-                writeTextFile(endpointsDir, modelFileBaseName, endpointsContent, outputChannel);
+                writeTextFile(apiDir, modelFileBaseName, renderTemplate('addModel/api_concern.rb', { modelName }), outputChannel);
+                writeTextFile(railsAdminDir, modelFileBaseName, renderTemplate('addModel/rails_admin_concern.rb', { modelName }), outputChannel);
+                writeTextFile(endpointsDir, modelFileBaseName, renderTemplate('addModel/endpoints_concern.rb', { modelName }), outputChannel);
 
                 // Add to the model file, the inclusion of the concerns
                 const concernIncluders = [
