@@ -1,0 +1,38 @@
+image: gabrieletassoni/vscode-devcontainers-thecore:3
+variables:
+  DISABLE_SPRING: 1
+stages:
+  - build
+  - test
+  - delivery
+  - deploy
+cache:
+  key: thecore3cache
+  paths:
+    - vendor/bundle
+    - app/assets
+    - lib/assets
+    - public/assets
+build:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: always
+  script:
+    - sudo -E /usr/bin/app-compile.sh
+to-dev:
+  when: on_success
+  stage: delivery
+  cache: []
+  variables:
+    TARGETENV: dev
+  script:
+    - /usr/bin/docker-deploy.sh
+to-prod:
+  when: manual
+  allow_failure: false
+  stage: deploy
+  cache: []
+  script:
+    - /usr/bin/docker-deploy.sh

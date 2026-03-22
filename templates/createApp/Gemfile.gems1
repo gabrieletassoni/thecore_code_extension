@@ -1,0 +1,6 @@
+
+gem 'sassc-rails'
+gem 'rails-erd', group: :development
+gem 'rails_admin'
+gem 'devise'
+gem 'cancancan'

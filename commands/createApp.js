@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { execShell, mkDirP } = require('../libs/os');
 const { workspaceExixtence, workspaceEmptiness, commandExistence, rubyOnRailsAppValidity } = require('../libs/check');
+const { renderTemplate } = require('../libs/templates');
+const { writeTextFile } = require('../libs/configs');
 
 // The code you place here will be executed every time your command is executed
 /**
@@ -64,15 +66,8 @@ async function perform() {
             // Read the Gemfile
             const gemfileContent = fs.readFileSync(gemfile, 'utf8');
             // Append the gems to the Gemfile
-            // "\ngem 'sassc-rails'\ngem 'rails-erd', group: :development\ngem 'rails_admin'\ngem 'devise'\ngem 'cancancan'"
-            const gemDependencies = [
-                "gem 'sassc-rails'",
-                "gem 'rails-erd', group: :development",
-                "gem 'rails_admin'",
-                "gem 'devise'",
-                "gem 'cancancan'"
-            ].join("\n");
-            const gemfileContentWithGems = gemfileContent + "\n" + gemDependencies;
+            const gemDependencies = renderTemplate('createApp/Gemfile.gems1');
+            const gemfileContentWithGems = gemfileContent + gemDependencies;
             // Write the Gemfile
             fs.writeFileSync(gemfile, gemfileContentWithGems);
     
@@ -95,11 +90,7 @@ async function perform() {
             await execShell(commands.join(" && "), workspaceRoot, outputChannel);
             outputChannel.appendLine('Bundle install and rails generate commands completed successfully.');
             
-            /* Add to the gemfileContent the following lines:
-                gem 'model_driven_api', '~> 3.1'
-                gem 'thecore_ui_rails_admin', '~> 3.2'
-            */
-            const gemfileContentWithGems2 = gemfileContentWithGems + "\ngem 'model_driven_api', '~> 3.1'\ngem 'thecore_ui_rails_admin', '~> 3.2'";
+            const gemfileContentWithGems2 = gemfileContentWithGems + renderTemplate('createApp/Gemfile.gems2');
             // Write the Gemfile
             fs.writeFileSync(gemfile, gemfileContentWithGems2);
             // Run the bundle install command
@@ -112,92 +103,17 @@ async function perform() {
             // Write the Gemfile
             // fs.writeFileSync(gemfile, gemfileContent3);
     
-            // Add a gitlab-ci.yml file with the following content:
+            // Add a gitlab-ci.yml file
             outputChannel.appendLine('Adding .gitlab-ci.yml file.');
-            const gitlabCiObject = {
-                "image": "gabrieletassoni/vscode-devcontainers-thecore:3",
-                "variables": {
-                    "DISABLE_SPRING": 1
-                },
-                "stages": [
-                    "build",
-                    "test",
-                    "delivery",
-                    "deploy"
-                ],
-                "cache": {
-                    "key": "thecore3cache",
-                    "paths": [
-                        "vendor/bundle",
-                        "app/assets",
-                        "lib/assets",
-                        "public/assets"
-                    ]
-                },
-                "build": {
-                    "stage": "build",
-                    "rules": [
-                        {
-                          "if": "$CI_COMMIT_TAG",
-                          "when": "never"
-                        },
-                        {
-                          "when": "always"
-                        }
-                    ],
-                    "script": [
-                        "sudo -E /usr/bin/app-compile.sh"
-                    ]
-                },
-                "to-dev": {
-                    "when": "on_success",
-                    "stage": "delivery",
-                    "cache": [],
-                    "variables": {
-                        "TARGETENV": "dev"
-                    },
-                    "script": [
-                        "/usr/bin/docker-deploy.sh"
-                    ]
-                },
-                "to-prod": {
-                    "when": "manual",
-                    "allow_failure": false,
-                    "stage": "deploy",
-                    "cache": [],
-                    "script": [
-                        "/usr/bin/docker-deploy.sh"
-                    ]
-                }
-            };
-            outputChannel.appendLine('Writing .gitlab-ci.yml file.');
-            require('../libs/configs').writeYAMLFile(workspaceRoot, '.gitlab-ci.yml', gitlabCiObject, outputChannel);
+            writeTextFile(workspaceRoot, '.gitlab-ci.yml', renderTemplate('createApp/gitlab-ci.yml'), outputChannel);
             outputChannel.appendLine('.gitlab-ci.yml file added successfully.');
 
             // Create a sample config/sidekiq.yml file
             outputChannel.appendLine('Adding config/sidekiq.yml file.');
-            const sidekiqYmlObject = {
-                ":concurrency": "<%= ENV.fetch('RAILS_MAX_THREADS') { 5 } %>",
-                ":verbose": false,
-                ":queues": [
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_default\" %>",
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailers\" %>",
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_analysis\" %>",
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_storage_purge\" %>",
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_incinerate\" %>",
-                  "<%= \"#{ENV['COMPOSE_PROJECT_NAME'] || 'notset'}_mailbox_routing\" %>"
-                ],
-                ":scheduler": {
-                  ":dynamic": true,
-                  ":enabled": true
-                }
-              }
-              ;
-            outputChannel.appendLine('Writing config/sidekiq.yml file.');
-            require('../libs/configs').writeYAMLFile(workspaceRoot, 'config/sidekiq.yml', sidekiqYmlObject, outputChannel);
+            writeTextFile(workspaceRoot, 'config/sidekiq.yml', renderTemplate('createApp/sidekiq.yml'), outputChannel);
     
-            // Create a version file with the following content: 3.0.1
-            fs.writeFileSync(path.join(workspaceRoot, 'version'), '3.0.1');
+            // Create a version file
+            writeTextFile(workspaceRoot, 'version', renderTemplate('createApp/version'), outputChannel);
     
             // Find if in the workspace directory config/development.rb a line with the following content: config.action_controller.raise_on_missing_callback_actions = true 
             // if it exists, replace true with false ath the end of the line
