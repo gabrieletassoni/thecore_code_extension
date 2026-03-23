@@ -10,7 +10,7 @@
   },
   "engines": {
     "vscode": "^1.85.0",
-    "node": ">=18"
+    "node": ">=20"
   },
   "categories": [
     "Other"
@@ -104,7 +104,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
+    "@types/node": "22.x",
     "@types/vscode": "^1.85.0",
     "@vscode/dts": "^0.4.0",
     "@vscode/test-cli": "^0.0.6",
