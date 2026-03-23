@@ -52,6 +52,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 ├── package.json
 ├── .eslintrc.json
 ├── .mocharc.yml
+├── .npmrc                    # Sets tag-version-prefix= so npm version tags as "3.0.12" not "v3.0.12"
 ├── jsconfig.json
 └── out/                      # Build output (git-ignored, never edit)
 ```
@@ -193,18 +194,36 @@ The build bundles `extension.js` and all `commands/`, `libs/`, and `templates/` 
 
 ## Release Process
 
-Releases are automated via `.github/workflows/main.yml`:
+Releases are automated via `.github/workflows/main.yml`. The version lives in exactly one place — `package.json` — and is never typed manually elsewhere.
 
-1. Bump `version` in `package.json`.
-2. Commit and push.
-3. Tag with the new version and push the tag:
-   ```bash
-   git tag v3.0.10
-   git push origin v3.0.10
-   ```
-4. GitHub Actions runs on semver tags, packages the extension, creates a GitHub Release with the `.vsix`, and publishes to the VS Code Marketplace using the `VSCE_PAT` secret.
+### Releasing (use the terminal, not VS Code Source Control)
 
-The `VSCE_PAT` is an Azure DevOps Personal Access Token scoped to **Marketplace → Manage**.
+**Do not use the VS Code Source Control panel to release.** It cannot create the git tag, so you would end up pushing a commit without a tag (no release triggered) or mismatching the tag against the version in `package.json`.
+
+Instead, use the npm release scripts from a terminal. They atomically bump `package.json`, commit, tag, and push in one step:
+
+```bash
+npm run release:patch   # x.y.Z → x.y.(Z+1)  — bug fixes
+npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
+npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
+```
+
+Each command runs `npm version <level>` (which updates `package.json`, commits, and creates a tag) followed by `git push --follow-tags` (which pushes both the commit and the tag in one go).
+
+### What happens next
+
+Once the tag is pushed, GitHub Actions:
+1. Runs tests (`npm test`) — if they fail, publishing is aborted.
+2. Packages the extension (`vsce package` → `.vsix`).
+3. Creates a GitHub Release with the `.vsix` attached.
+
+### Why no `v` prefix on tags
+
+`.npmrc` sets `tag-version-prefix=` (empty). This keeps tags in the format `3.0.12` to match the CI trigger pattern `[0-9]+.[0-9]+.[0-9]+`. Do not remove this setting.
+
+### Secret required
+
+The `VSCE_PAT` secret must be set in the GitHub repository. It is an Azure DevOps Personal Access Token scoped to **Marketplace → Manage**.
 
 ---
 
