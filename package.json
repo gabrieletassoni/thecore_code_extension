@@ -15,6 +15,13 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "rails",
+    "ruby",
+    "scaffold",
+    "devcontainer",
+    "thecore"
+  ],
   "activationEvents": [],
   "main": "./out/main.js",
   "contributes": {
