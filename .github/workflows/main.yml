@@ -35,3 +35,6 @@ jobs:
           tag: ${{ github.ref_name }}
           artifacts: "*.vsix"
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Open VSX
+        run: npx ovsx publish *.vsix --pat ${{ secrets.OVSX_PAT }}
