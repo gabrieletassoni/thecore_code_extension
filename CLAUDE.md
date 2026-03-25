@@ -153,6 +153,8 @@ All functions that log accept `outputChannel` as a parameter (never use `console
 
 ## Testing
 
+**Rule: Always add or update tests when adding or modifying any function.** This applies to command files (`commands/`), library functions (`libs/`), and any new exported function. A change without a corresponding test is incomplete.
+
 **Framework:** Mocha + Sinon + proxyquire
 
 **Run tests:**

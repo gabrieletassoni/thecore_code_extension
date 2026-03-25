@@ -39,7 +39,7 @@ async function perform() {
             writeTextFile(devcontainerDir, 'devcontainer.json', renderTemplate('setupDevContainer/devcontainer.json', { name: devcontainerName }), outputChannel);
 
             // Creating the docker-compose.yml file inside the .devcontainer directory
-            writeTextFile(devcontainerDir, 'docker-compose.yml', renderTemplate('setupDevContainer/docker-compose.yml', { name: railsStyleKey(devcontainerName) })), outputChannel);
+            writeTextFile(devcontainerDir, 'docker-compose.yml', renderTemplate('setupDevContainer/docker-compose.yml', { name: railsStyleKey(devcontainerName) }), outputChannel);
 
             // Creating the Dockerfile file inside the .devcontainer directory
             writeTextFile(devcontainerDir, 'Dockerfile', renderTemplate('setupDevContainer/Dockerfile'), outputChannel);

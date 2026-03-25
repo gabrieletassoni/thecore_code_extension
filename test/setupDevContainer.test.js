@@ -75,6 +75,21 @@ describe('commands/setupDevContainer', () => {
         assert.ok(Array.isArray(parsed.customizations.vscode.extensions));
     });
 
+    it('writes a docker-compose.yml with the project name as the database name', async () => {
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        const writeFileSyncStub = sinon.stub(fs, 'writeFileSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform();
+
+        const composeCall = writeFileSyncStub.args.find(([p]) => p.endsWith('docker-compose.yml'));
+        assert.ok(composeCall, 'docker-compose.yml should be written');
+        // 'My Project' → railsStyleKey → 'my_project'
+        assert.ok(composeCall[1].includes('my_project'), 'DATABASE_URL should contain the rails-style project key');
+    });
+
     it('writes a Dockerfile with the expected base image', async () => {
         sinon.stub(fs, 'existsSync').returns(false);
         sinon.stub(fs, 'mkdirSync');
