@@ -4,7 +4,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { workspaceExixtence } = require('../libs/check');
-const { writeTextFile } = require('../libs/configs');
+const { writeTextFile, railsStyleKey } = require('../libs/configs');
 const { renderTemplate } = require('../libs/templates');
 
 // The code you place here will be executed every time your command is executed
@@ -32,12 +32,14 @@ async function perform() {
                 ignoreFocusOut: true,
                 prompt: 'Please enter the name of this project, i.e. Thecore Backend.',
             })
+            // transform the devcontainerNAme in a form compatible with the output from rails' .titleize.gsub(/[^0-9a-z]/i, '').underscore
+
 
             // Writing the devcontainer.json file
             writeTextFile(devcontainerDir, 'devcontainer.json', renderTemplate('setupDevContainer/devcontainer.json', { name: devcontainerName }), outputChannel);
 
             // Creating the docker-compose.yml file inside the .devcontainer directory
-            writeTextFile(devcontainerDir, 'docker-compose.yml', renderTemplate('setupDevContainer/docker-compose.yml'), outputChannel);
+            writeTextFile(devcontainerDir, 'docker-compose.yml', renderTemplate('setupDevContainer/docker-compose.yml', { name: railsStyleKey(devcontainerName) })), outputChannel);
 
             // Creating the Dockerfile file inside the .devcontainer directory
             writeTextFile(devcontainerDir, 'Dockerfile', renderTemplate('setupDevContainer/Dockerfile'), outputChannel);

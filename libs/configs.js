@@ -69,6 +69,25 @@ function createGitignoreFile(dir, outputChannel) {
     writeTextFile(dir, '.gitignore', renderTemplate('shared/gitignore'), outputChannel);
 }
 
+function railsStyleKey(str) {
+  // Step 1: titleize — capitalize first letter of each word
+  const titleized = str
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+  // Step 2: gsub(/[^0-9a-z]/i, '') — remove non-alphanumeric characters
+  const stripped = titleized.replace(/[^0-9a-zA-Z]/g, '');
+
+  // Step 3: underscore — CamelCase → snake_case
+  const underscored = stripped
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+    .toLowerCase();
+
+  return underscored;
+}
+
 // Make the following code available to the extension.js file
 module.exports = {
     writeJSONFile,
@@ -76,4 +95,5 @@ module.exports = {
     writeTextFile,
     createGitignoreFile,
     mergeYmlContent,
+    railsStyleKey
 }

@@ -66,8 +66,11 @@ async function perform() {
             // Append the gems to the Gemfile
             // "\ngem 'sassc-rails'\ngem 'rails-erd', group: :development\ngem 'rails_admin'\ngem 'devise'\ngem 'cancancan'"
             const gemDependencies = [
-                "gem 'sassc-rails'",
                 "gem 'rails-erd', group: :development",
+                "gem 'ruby-lsp', require: false, group: :development",
+                "gem 'rubocop', require: false, group: :development",
+                "gem 'rubocop-rails', require: false, group: :development",
+                "gem 'sassc-rails'",
                 "gem 'rails_admin'",
                 "gem 'devise'",
                 "gem 'cancancan'"

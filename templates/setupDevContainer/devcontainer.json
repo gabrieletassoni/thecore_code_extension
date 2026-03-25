@@ -1,37 +1,55 @@
+// For format details, see https://aka.ms/devcontainers/containers/ruby-rails
 {
-    "name": "{{name}}",
-    "dockerComposeFile": "docker-compose.yml",
-    "service": "app",
-    "workspaceFolder": "/workspaces/project/backend/",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-azuretools.vscode-docker",
-                "esbenp.prettier-vscode",
-                "dbaeumer.vscode-eslint",
-                "github.github-vscode-theme",
-                "henriiik.vscode-sort",
-                "karunamurti.haml",
-                "iciclesoft.workspacesort",
-                "howardzuo.vscode-git-tags",
-                "shakram02.bash-beautify",
-                "rogalmic.bash-debug",
-                "bung87.rails",
-                "redhat.vscode-yaml",
-                "funkyremi.vscode-google-translate",
-                "mohd-akram.vscode-html-format",
-                "lewisardern.semgrep-snippets",
-                "eamodio.gitlens",
-                "donjayamanne.githistory",
-                "aliariff.vscode-erb-beautify",
-                "GrapeCity.gc-excelviewer",
-                "jnbt.vscode-rufo",
-                "anweber.vscode-httpyac",
-                "mhutchie.git-graph",
-                "Shopify.ruby-lsp",
-                "/etc/thecore/thecore.vsix"
-            ]
-        }
-    },
-    "remoteUser": "vscode"
+	"name": "{{name}}",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspaces/project/backend",
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-docker",
+				"esbenp.prettier-vscode",
+				"dbaeumer.vscode-eslint",
+				"github.github-vscode-theme",
+				"henriiik.vscode-sort",
+				"karunamurti.haml",
+				"iciclesoft.workspacesort",
+				"howardzuo.vscode-git-tags",
+				"shakram02.bash-beautify",
+				"rogalmic.bash-debug",
+				"redhat.vscode-yaml",
+				"funkyremi.vscode-google-translate",
+				"mohd-akram.vscode-html-format",
+				"lewisardern.semgrep-snippets",
+				"eamodio.gitlens",
+				"aliariff.vscode-erb-beautify",
+				"GrapeCity.gc-excelviewer",
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"jnbt.vscode-rufo",
+				"anweber.vscode-httpyac",
+				"mhutchie.git-graph",
+				"gabrieletassoni.thecore",
+				"Shopify.ruby-lsp",
+			],
+			"settings": {
+				"rubyLsp.rubyVersionManager": { "identifier": "none" },
+				"rubyLsp.formatter": "rubocop",
+				"editor.formatOnSave": true,
+				"[ruby]": {
+					"editor.defaultFormatter": "Shopify.ruby-lsp",
+					"editor.formatOnSave": true
+				},
+				"files.associations": {
+					"Gemfile.base": "gemfile",
+					"Gemfile.lock": "gemfile"
+				}
+			}
+		}
+	},
+
+	"postCreateCommand": "bundle install",
+
+	"remoteUser": "vscode"
 }
