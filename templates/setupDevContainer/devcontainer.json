@@ -34,7 +34,7 @@
 			],
 			"settings": {
 				"rubyLsp.rubyVersionManager": { "identifier": "none" },
-				"rubyLsp.formatter": "rubocop",
+				"rubyLsp.formatter": "rubocop_internal",
 				"editor.formatOnSave": true,
 				"[ruby]": {
 					"editor.defaultFormatter": "Shopify.ruby-lsp",
