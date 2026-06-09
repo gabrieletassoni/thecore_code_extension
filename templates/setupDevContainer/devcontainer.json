@@ -50,7 +50,9 @@
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": { "version": "lts" },
 		"ghcr.io/devcontainers/features/github-cli:1": {},
-		"ghcr.io/devcontainers/features/git-lfs:1": {}
+		"ghcr.io/devcontainers/features/git-lfs:1": {},
+		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers-extra/features/apt-packages:1": { "packages": "graphviz" }
 	},
 
 	"postCreateCommand": "bundle install",

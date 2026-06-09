@@ -4,6 +4,11 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.1.8]
+
+### Fixed
+- Replace non-existent `ghcr.io/devcontainers-extra/features/graphviz:1` with `ghcr.io/devcontainers-extra/features/apt-packages:1` (packages: graphviz) in `templates/setupDevContainer/devcontainer.json`
+
 ## [3.1.6]
 
 ### Added
