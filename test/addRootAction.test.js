@@ -3,94 +3,86 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
-
 const { perform } = require('../commands/addRootAction');
-
-const ATOM_DIR = path.resolve(__dirname, 'samples/atom');
-
-function makeOutputChannel() {
-    return { show: () => {}, appendLine: () => {}, append: () => {} };
-}
+const { makeCtx, makeAtomWorkspace } = require('./helpers/makeCtx');
 
 describe('commands/addRootAction', () => {
-    beforeEach(() => {
-        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
-        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
-    });
-
     afterEach(() => sinon.restore());
 
-    it('shows an error when atomDir is undefined', async () => {
+    it('shows an error when no folder was clicked (workspace is null)', async () => {
+        const ctx = makeCtx({ workspace: null });
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
-        await perform(undefined);
+        await perform(ctx);
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('right click'));
     });
 
     it('returns early when no workspace is open', async () => {
-        vscode.workspace.workspaceFolders = undefined;
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.workspaceExists.returns({ ok: false, message: 'No workspace' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when atomDir is not a directory', async () => {
-        const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.isDir.returns({ ok: false, message: 'Not a dir' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: gemspecPath });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when lib/root_actions does not exist inside atomDir', async () => {
-        const configDir = path.join(ATOM_DIR, 'config');
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.isDir
+            .onFirstCall().returns({ ok: true })
+            .onSecondCall().returns({ ok: false, message: 'lib/root_actions missing' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: configDir });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when user cancels the input box', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when the root action file already exists', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.isFile.returns({ ok: true, value: '/some/file.rb' });
         sinon.stub(vscode.window, 'showInputBox').resolves('existing_root');
-        const realExistsSync = fs.existsSync.bind(fs);
-        sinon.stub(fs, 'existsSync').callsFake((p) => {
-            if (p.endsWith('existing_root.rb')) return true;
-            return realExistsSync(p);
-        });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
-        // isFile returns true → function returns early without success message
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('creates root action files and shows success on the happy path', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves('my_root_action');
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
         sinon.stub(fs, 'writeFileSync');
         sinon.stub(fs, 'appendFileSync');
-        sinon.stub(fs, 'mkdirSync');
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
 
         assert.ok(infoStub.calledOnce, 'success message should be shown');
         assert.ok(infoStub.firstCall.args[0].includes('my_root_action'));
     });
 
     it('shows an error message when an unexpected exception is thrown', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves('crash_action');
-        sinon.stub(fs, 'writeFileSync').throws(new Error('disk full'));
-        sinon.stub(fs, 'appendFileSync');
-        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(fs, 'readFileSync').throws(new Error('disk full'));
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
 
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('disk full'));

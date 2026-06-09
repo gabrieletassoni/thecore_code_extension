@@ -86,15 +86,15 @@ Using the provided [devcontainer](https://github.com/gabrieletassoni/thecore_cod
 
 ## Publishing a new release
 
-Releases are automated via GitHub Actions and triggered by pushing a version tag.
+Releases are automated via GitHub Actions. Use the npm release scripts from a terminal — never create git tags manually.
 
 ```bash
-# Bump the version in package.json first, then:
-git tag v3.0.7
-git push origin v3.0.7
+npm run release:patch   # x.y.Z → x.y.(Z+1)  — bug fixes
+npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
+npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
 ```
 
-The workflow builds the extension, creates a GitHub Release with the `.vsix` attached, and publishes to the VS Code Marketplace.
+Each command updates `package.json`, commits, tags, and pushes. GitHub Actions then runs tests, packages the `.vsix`, creates a GitHub Release, and publishes to the VS Code Marketplace.
 
 > The `VSCE_PAT` secret (Azure DevOps Personal Access Token with Marketplace → Manage scope) must be configured in the repository's GitHub Actions secrets.
 

@@ -1,152 +1,93 @@
-// Import the module and reference it with the alias vscode in your code below
+'use strict';
+
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { commandExistence, workspaceExixtence, rubyOnRailsAppValidity, fileExistence } = require('../libs/check');
-const { execShell, mkDirP } = require('../libs/os');
-const { createGitignoreFile, writeTextFile, writeYAMLFile } = require('../libs/configs');
 const { renderTemplate } = require('../libs/templates');
 const { snakeToClassName } = require('../libs/helpers');
+const { CommandRunner } = require('../libs/commandRunner');
 
-// The code you place here will be executed every time your command is executed
-/**
- * Creates a Thecore 3 ATOM.
- */
-async function perform() {
-    // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
-    const outputChannel = vscode.window.createOutputChannel('Thecore: Create ATOM');
-    outputChannel.show();
-    outputChannel.appendLine('Creating a Thecore 3 ATOM.');
+async function perform(ctx) {
+    ctx.show();
+    ctx.log('Creating a Thecore 3 ATOM.');
+
+    const runner = new CommandRunner(ctx);
+    const showErr = msg => vscode.window.showErrorMessage(msg);
+
     try {
+        if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
 
-        // Check if we are inside a workspace
-        if (!workspaceExixtence(outputChannel)) { return; }
+        const rorResult = ctx.check.railsAppValid();
+        if (!runner.check(rorResult, showErr)) return;
 
-        // Check if the workspace root is a Ruby on Rails app
-        const rorDirs = rubyOnRailsAppValidity(false, outputChannel);
-        if (!rorDirs) { return; }
-
-        // Check if ruby, rails and bundle commands are available
-        const commands = ['ruby', 'rails', 'bundle'];
-        for (const command of commands) {
-            if (!commandExistence(command, outputChannel)) { return; }
+        for (const command of ['ruby', 'rails', 'bundle']) {
+            if (!runner.check(ctx.check.commandExists(command), showErr)) return;
         }
 
-        // Check if `./vendor/submodules/` exists
-        const submodulesDir = path.join(rorDirs.vendorDir, 'submodules');
-        if (!fileExistence(submodulesDir, outputChannel)) { return; }
+        const submodulesDir = path.join(rorResult.value.vendorDir, 'submodules');
+        if (!runner.check(ctx.check.fileExists(submodulesDir), showErr)) return;
 
-        /*
-         * Asking the user some info useful for generating a rails engine, without setting a default value, but using only the placeholder:
-         */
-
-        // Asking the user for the name of the submodule
-        const submoduleName = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
+        const submoduleName = await runner.input({
             placeHolder: 'Enter the name of the submodule, i.e. TCP Debugger',
-            validateInput: (submoduleName) => {
-                if (!submoduleName) {
-                    return '❌ The ATOM name is not valid. Please try again.';
-                }
-                return null;
-            }
+            validate: (v) => !v ? '❌ The ATOM name is not valid. Please try again.' : null,
         });
-        if (!submoduleName) {
-            outputChannel.appendLine('❌ The ATOM name cannot be empty. Please try again.');
-            return; 
-        }
-        // Make a constant with the dashcase version of the submodule name
+        if (!submoduleName) { ctx.log('❌ The ATOM name cannot be empty. Please try again.'); return; }
+
         const submoduleNameSnakeCase = submoduleName.replace(/ /g, '_').toLowerCase();
 
-        // Ask the user for some info useful for generating a rails engine, without setting a default value, but using only the placeholder:
-        // - summary
-        // - description
-        // - author
-        // - email
-        // - url
-        // If each of the previous info is not valid, fail, in addition, if email is not an email, fail and if url is not an url, fail
-        const summary = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
+        const summary = await runner.input({
             placeHolder: 'Enter the summary of the submodule, i.e. TCP Debugger',
-            validateInput: (summary) => {
-                if (!summary) {
-                    return '❌ The summary is not valid. Please try again.';
-                }
-                return null;
-            }
+            validate: (v) => !v ? '❌ The summary is not valid. Please try again.' : null,
         });
-        const description = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
+        if (!summary) return;
+
+        const description = await runner.input({
             placeHolder: 'Enter the description of the submodule, i.e. TCP Debugger',
-            validateInput: (description) => {
-                if (!description) {
-                    return '❌ The description is not valid. Please try again.';
-                }
-                return null;
-            }
+            validate: (v) => !v ? '❌ The description is not valid. Please try again.' : null,
         });
-        const author = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
+        if (!description) return;
+
+        const author = await runner.input({
             placeHolder: 'Enter the author of the submodule, i.e. Alchemic IT',
-            validateInput: (author) => {
-                if (!author) {
-                    return '❌ The author is not valid. Please try again.';
-                }
-                return null;
-            }
+            validate: (v) => !v ? '❌ The author is not valid. Please try again.' : null,
         });
-        const email = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
-            placeHolder: 'Enter the email of the submodule author, i.e.',
-            validateInput: (email) => {
-                if (!email || !email.includes('@')) {
-                    return '❌ The email is not valid. Please try again.';
-                }
-                return null;
-            }
-        });
-        const url = await vscode.window.showInputBox({
-            ignoreFocusOut: true,
-            placeHolder: 'Enter the url of the submodule, i.e.',
-            validateInput: (url) => {
-                if (!url || !url.startsWith('http')) {
-                    return '❌ The url is not valid. Please try again.';
-                }
-                return null;
-            }
-        });
+        if (!author) return;
 
-        // Create the rails engine
-        // Only if all the previous info are valid, create the rails engine
-        await createRailsEngine(submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir, outputChannel);
+        const email = await runner.input({
+            placeHolder: 'Enter the email of the submodule author',
+            validate: (v) => (!v || !v.includes('@')) ? '❌ The email is not valid. Please try again.' : null,
+        });
+        if (!email) return;
 
-        // Add to the main app Gemfile.base file the line `gem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`
-        const mainAppGemfile = path.join(rorDirs.workspaceRoot, 'Gemfile');
+        const url = await runner.input({
+            placeHolder: 'Enter the url of the submodule',
+            validate: (v) => (!v || !v.startsWith('http')) ? '❌ The url is not valid. Please try again.' : null,
+        });
+        if (!url) return;
+
+        await createRailsEngine(ctx, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir);
+
+        const mainAppGemfile = path.join(rorResult.value.workspaceRoot, 'Gemfile');
         const gemfileContent = fs.readFileSync(mainAppGemfile, 'utf8');
-        const newGemfileContent = gemfileContent + `\ngem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`;
-        fs.writeFileSync(mainAppGemfile, newGemfileContent);
-        outputChannel.appendLine(`✅ Added the ${submoduleNameSnakeCase} gem to the main app Gemfile file.`);
+        fs.writeFileSync(mainAppGemfile, gemfileContent + `\ngem "${submoduleNameSnakeCase}", path: "vendor/submodules/${submoduleNameSnakeCase}"`);
+        ctx.log(`✅ Added the ${submoduleNameSnakeCase} gem to the main app Gemfile file.`);
 
-        // Inform the user the submodule has been created succesfully
-        outputChannel.appendLine(`✅ The submodule ${submoduleName} has been created succesfully.`);
+        ctx.log(`✅ The submodule ${submoduleName} has been created succesfully.`);
         vscode.window.showInformationMessage(`The submodule ${submoduleName} has been created succesfully.`);
     } catch (error) {
         console.error(error);
-        outputChannel.appendLine(`❌ An error occurred: ${error.message}`);
+        ctx.log(`❌ An error occurred: ${error.message}`);
         vscode.window.showErrorMessage('An error occurred while creating the Thecore 3 ATOM. Please check the output channel for more details.');
     }
 }
 
-function setupGemspecFile(submodulesDir, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, outputChannel) {
-    // In the gemspec file, replace the placeholders with the correct info provided by the user adding also the homepage
+function setupGemspecFile(ctx, submodulesDir, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url) {
     const gemspecFile = path.join(submodulesDir, submoduleNameSnakeCase, `${submoduleNameSnakeCase}.gemspec`);
     let gemspec = fs.readFileSync(gemspecFile, 'utf8');
-    // Remove all spec.add_dependency  or spec.add_development_dependency lines from the gemspec file
-    const lines = gemspec.split('\n');
     let newGemspec = '';
-    lines.forEach((line) => {
+    gemspec.split('\n').forEach((line) => {
         if (line.includes('.add_dependency')) {
-            newGemspec += `  spec.add_dependency 'model_driven_api', '~> 3.1'\n  spec.add_dependency 'thecore_ui_rails_admin', '~> 3.2'\n`
+            newGemspec += `  spec.add_dependency 'model_driven_api', '~> 3.1'\n  spec.add_dependency 'thecore_ui_rails_admin', '~> 3.2'\n`;
         } else if (line.includes('.authors')) {
             newGemspec += `  spec.authors = ["${author}"]\n`;
         } else if (line.includes('.email')) {
@@ -155,7 +96,7 @@ function setupGemspecFile(submodulesDir, submoduleName, submoduleNameSnakeCase, 
             newGemspec += `  spec.homepage = "${url}"\n`;
         } else if (line.includes('.summary')) {
             newGemspec += `  spec.summary = "${summary}"\n`;
-        }else if (line.includes('.description')) {
+        } else if (line.includes('.description')) {
             newGemspec += `  spec.description = "${description}"\n`;
         } else if (line.includes('source_code_uri')) {
             newGemspec += `  spec.metadata["source_code_uri"] = spec.homepage\n`;
@@ -166,63 +107,54 @@ function setupGemspecFile(submodulesDir, submoduleName, submoduleNameSnakeCase, 
         } else {
             newGemspec += `${line}\n`;
         }
-
     });
-    // Write the file, overwriting existing one
     fs.writeFileSync(gemspecFile, newGemspec);
-    outputChannel.appendLine(`Modified the ${submoduleName} gemspec file.`);
+    ctx.log(`Modified the ${submoduleName} gemspec file.`);
 }
 
-function createThecoreFolders(submodulesDir, submoduleNameSnakeCase, outputChannel) {
-    const dirs = [
-        path.join(submodulesDir, submoduleNameSnakeCase, 'db', 'migrate'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'app', 'models', 'concerns', 'api'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'app', 'models', 'concerns', 'rails_admin'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'initializers'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'locales'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'lib', 'root_actions'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'lib', 'member_actions'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'lib', 'collection_actions'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'app', 'assets', 'javascripts'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'app', 'assets', 'stylesheets'),
-        path.join(submodulesDir, submoduleNameSnakeCase, 'app', 'views', 'rails_admin', 'main'),
-        path.join(submodulesDir, submoduleNameSnakeCase, '.github', 'workflows'),
-    ];
-
-    dirs.forEach((dir) => {
-        mkDirP(dir, outputChannel);
-    });
+function createThecoreFolders(ctx, submodulesDir, submoduleNameSnakeCase) {
+    const base = path.join(submodulesDir, submoduleNameSnakeCase);
+    [
+        path.join(base, 'db', 'migrate'),
+        path.join(base, 'app', 'models', 'concerns', 'api'),
+        path.join(base, 'app', 'models', 'concerns', 'rails_admin'),
+        path.join(base, 'config', 'initializers'),
+        path.join(base, 'config', 'locales'),
+        path.join(base, 'lib', 'root_actions'),
+        path.join(base, 'lib', 'member_actions'),
+        path.join(base, 'lib', 'collection_actions'),
+        path.join(base, 'app', 'assets', 'javascripts'),
+        path.join(base, 'app', 'assets', 'stylesheets'),
+        path.join(base, 'app', 'views', 'rails_admin', 'main'),
+        path.join(base, '.github', 'workflows'),
+    ].forEach(dir => ctx.mkdir(dir));
 }
 
-function addInitializers(submodulesDir, submoduleNameSnakeCase, outputChannel) {
+function addInitializers(ctx, submodulesDir, submoduleNameSnakeCase) {
     const configInitializersDir = path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'initializers');
-
-    writeTextFile(configInitializersDir, 'after_initialize.rb', renderTemplate('createATOM/after_initialize.rb'), outputChannel);
-
-    // Add to db migration
-    const addToDbMigrationTxt = `Rails.application.config.paths['db/migrate'] << File.expand_path("../../db/migrate", __dir__)`;
-    writeTextFile(configInitializersDir, 'add_to_db_migration.rb', addToDbMigrationTxt, outputChannel);
-
-    writeTextFile(configInitializersDir, 'assets.rb', renderTemplate('createATOM/assets.rb'), outputChannel);
-    writeTextFile(configInitializersDir, 'abilities.rb', renderTemplate('createATOM/abilities.rb', { className: snakeToClassName(submoduleNameSnakeCase) }), outputChannel);
-
+    ctx.write.textFile(configInitializersDir, 'after_initialize.rb', renderTemplate('createATOM/after_initialize.rb'));
+    ctx.write.textFile(configInitializersDir, 'add_to_db_migration.rb',
+        `Rails.application.config.paths['db/migrate'] << File.expand_path("../../db/migrate", __dir__)`);
+    ctx.write.textFile(configInitializersDir, 'assets.rb', renderTemplate('createATOM/assets.rb'));
+    ctx.write.textFile(configInitializersDir, 'abilities.rb',
+        renderTemplate('createATOM/abilities.rb', { className: snakeToClassName(submoduleNameSnakeCase) }));
 }
 
-function addDBFiles(submodulesDir, submoduleNameSnakeCase, outputChannel) {
-    const dbDir = path.join(submodulesDir, submoduleNameSnakeCase, 'db');
-    writeTextFile(dbDir, 'seeds.rb', renderTemplate('createATOM/seeds.rb', { submoduleNameSnakeCase }), outputChannel);
+function addDBFiles(ctx, submodulesDir, submoduleNameSnakeCase) {
+    ctx.write.textFile(
+        path.join(submodulesDir, submoduleNameSnakeCase, 'db'),
+        'seeds.rb',
+        renderTemplate('createATOM/seeds.rb', { submoduleNameSnakeCase })
+    );
 }
 
-function addLocaleFiles(submodulesDir, submoduleNameSnakeCase, outputChannel) {
-    const configLocalesDir = path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'locales');
-    // In the config/locales add, only if it's not already existing, a file named en.yml and another file named it.yml with the en: and it: keys respectively
-    // and below them the admin -> actions key with the Dashcase version of the submodule name as value
-    writeYAMLFile(configLocalesDir, 'en.yml', { en: null }, outputChannel);
-    writeYAMLFile(configLocalesDir, 'it.yml', { it: null }, outputChannel);
+function addLocaleFiles(ctx, submodulesDir, submoduleNameSnakeCase) {
+    const localesDir = path.join(submodulesDir, submoduleNameSnakeCase, 'config', 'locales');
+    ctx.write.yamlFile(localesDir, 'en.yml', { en: null });
+    ctx.write.yamlFile(localesDir, 'it.yml', { it: null });
 }
 
-function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outputChannel) {
-    // Add a github workflow action called gempush.yml with the following content:
+function addCICDFiles(ctx, email, author, submodulesDir, submoduleNameSnakeCase) {
     const gempushObject = {
         name: 'Ruby Gem',
         on: 'push',
@@ -231,14 +163,12 @@ function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outp
                 name: 'Build + Publish',
                 'runs-on': 'ubuntu-latest',
                 steps: [
-                    {
-                        uses: 'actions/checkout@v3'
-                    },
+                    { uses: 'actions/checkout@v3' },
                     {
                         name: 'Check if version already exists',
                         id: 'check_version',
                         run: [
-                            'version=$(grep -oP \'VERSION = "\K[^"]+\' lib/*/version.rb | awk -F\'.\' \'{print $1"."$2"."$3})',
+                            'version=$(grep -oP \'VERSION = "\\K[^"]+\' lib/*/version.rb | awk -F\'.\' \'{print $1"."$2"."$3})',
                             'git fetch --unshallow --tags',
                             'echo $?'
                         ]
@@ -248,7 +178,7 @@ function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outp
                         run: [
                             'git config --local user.email "noreply@alchemic.it"',
                             'git config --local user.name "AlchemicIT"',
-                            'version=$(grep -oP \'VERSION = "\K[^"]+\' lib/*/version.rb | awk -F\'.\' \'{print $1"."$2"."$3})',
+                            'version=$(grep -oP \'VERSION = "\\K[^"]+\' lib/*/version.rb | awk -F\'.\' \'{print $1"."$2"."$3})',
                             'git tag -a $version -m "Version $version"',
                             'git push --tags'
                         ],
@@ -260,23 +190,20 @@ function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outp
                             'mkdir -p $HOME/.gem',
                             'touch $HOME/.gem/credentials',
                             'chmod 0600 $HOME/.gem/credentials',
-                            'printf -- "---\n:rubygems_api_key: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials',
+                            'printf -- "---\\n:rubygems_api_key: ${GEM_HOST_API_KEY}\\n" > $HOME/.gem/credentials',
                             'gem build *.gemspec',
                             'gem push *.gem'
                         ],
                         if: 'env.version_exists == \'false\'',
-                        env: {
-                            GEM_HOST_API_KEY: '${{secrets.RUBYGEMS_AUTH_TOKEN}}'
-                        }
+                        env: { GEM_HOST_API_KEY: '${{secrets.RUBYGEMS_AUTH_TOKEN}}' }
                     }
                 ]
             }
         }
     };
-    writeYAMLFile(path.join(submodulesDir, submoduleNameSnakeCase, '.github', 'workflows'), 'gempush.yml', gempushObject, outputChannel);
+    ctx.write.yamlFile(path.join(submodulesDir, submoduleNameSnakeCase, '.github', 'workflows'), 'gempush.yml', gempushObject);
 
-    // Also add a gitlab ci file suitable for building using the thecore devcontainer, it's content thus must be:
-    const gitlabCiOject = {
+    const gitlabCiObject = {
         image: 'gabrieletassoni/vscode-devcontainers-thecore:3',
         variables: {
             GITLAB_EMAIL: email,
@@ -284,31 +211,17 @@ function addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outp
             GITLAB_GEM_REPO_TARGET: 'https://${GEM_HOST}/',
             GEM_HOST_API_KEY: '${GEMS_REPO_CREDENTIALS}'
         },
-        stages: [
-            'build',
-            'release'
-        ],
+        stages: ['build', 'release'],
         build_gem: {
-            rules: [
-                {
-                    if: '$CI_COMMIT_TAG',
-                    when: 'never'
-                },
-                {
-                    when: 'always'
-                }
-            ],
+            rules: [{ if: '$CI_COMMIT_TAG', when: 'never' }, { when: 'always' }],
             stage: 'build',
-            script: [
-                '/usr/bin/gem-compile.sh'
-            ]
+            script: ['/usr/bin/gem-compile.sh']
         }
     };
-    writeYAMLFile(path.join(submodulesDir, submoduleNameSnakeCase), '.gitlab-ci.yml', gitlabCiOject, outputChannel);
+    ctx.write.yamlFile(path.join(submodulesDir, submoduleNameSnakeCase), '.gitlab-ci.yml', gitlabCiObject);
 }
 
-function setupGemfile(submodulesDir, submoduleNameSnakeCase, outputChannel) {
-    // add Thecore dependecies to the submodule Gemfile and gemspec, the two Thecore gems to add are: model_driven_api and thecore_ui_rails_admin both at version ~3.0
+function setupGemfile(ctx, submodulesDir, submoduleNameSnakeCase) {
     const gemfile = path.join(submodulesDir, submoduleNameSnakeCase, 'Gemfile');
     let gemfileContent = fs.readFileSync(gemfile, 'utf8');
     gemfileContent += `\ngem 'pg'`;
@@ -316,47 +229,33 @@ function setupGemfile(submodulesDir, submoduleNameSnakeCase, outputChannel) {
     gemfileContent += `\ngem 'thecore_ui_rails_admin', '~> 3.2'`;
     fs.writeFileSync(gemfile, gemfileContent);
 
-    // Add the requires to the lib/${submoduleNameSnakeCase}.rb file
     const libFile = path.join(submodulesDir, submoduleNameSnakeCase, 'lib', `${submoduleNameSnakeCase}.rb`);
     let libFileContent = fs.readFileSync(libFile, 'utf8');
     libFileContent += `\nrequire 'model_driven_api'`;
     libFileContent += `\nrequire 'thecore_ui_rails_admin'`;
     fs.writeFileSync(libFile, libFileContent);
-    
-    outputChannel.appendLine(` - Added the thecore dependecies to ${submoduleNameSnakeCase} Gemfile file.`);
+
+    ctx.log(` - Added the thecore dependecies to ${submoduleNameSnakeCase} Gemfile file.`);
 }
 
-async function createRailsEngine(submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir, outputChannel) {
-    // Creating the submodule using the `rails plugin new "$ENGINE_NAME" -fG --full` command from the submodulesDir
-    outputChannel.appendLine(`Creating the submodule ${submoduleName} using the rails plugin new command.`);
-    
+async function createRailsEngine(ctx, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, submodulesDir) {
+    ctx.log(`Creating the submodule ${submoduleName} using the rails plugin new command.`);
     try {
-        await execShell(`rails plugin new "${path.join(submodulesDir, submoduleNameSnakeCase)}" -fG --skip-gemfile-entry --skip-hotwire --full`, submodulesDir, outputChannel);  
-
-        // Overwrite the .gitignore file with the string provided here
-        createGitignoreFile(path.join(submodulesDir, submoduleNameSnakeCase), outputChannel);
-
-        // Create Thecore folders inside the submodule root
-        createThecoreFolders(submodulesDir, submoduleNameSnakeCase, outputChannel);
-
-        // Create intiaizer files inside the config/initializers folder
-        addInitializers(submodulesDir, submoduleNameSnakeCase, outputChannel);
-
-        addDBFiles(submodulesDir, submoduleNameSnakeCase, outputChannel);
-
-        addLocaleFiles(submodulesDir, submoduleNameSnakeCase, outputChannel);
-
-        addCICDFiles(email, author, submodulesDir, submoduleNameSnakeCase, outputChannel);
-
-        setupGemfile(submodulesDir, submoduleNameSnakeCase, outputChannel);
-        // Setup the gemspec file
-        setupGemspecFile(submodulesDir, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url, outputChannel);
+        await ctx.exec(
+            `rails plugin new "${path.join(submodulesDir, submoduleNameSnakeCase)}" -fG --skip-gemfile-entry --skip-hotwire --full`,
+            submodulesDir
+        );
+        ctx.write.gitignoreFile(path.join(submodulesDir, submoduleNameSnakeCase));
+        createThecoreFolders(ctx, submodulesDir, submoduleNameSnakeCase);
+        addInitializers(ctx, submodulesDir, submoduleNameSnakeCase);
+        addDBFiles(ctx, submodulesDir, submoduleNameSnakeCase);
+        addLocaleFiles(ctx, submodulesDir, submoduleNameSnakeCase);
+        addCICDFiles(ctx, email, author, submodulesDir, submoduleNameSnakeCase);
+        setupGemfile(ctx, submodulesDir, submoduleNameSnakeCase);
+        setupGemspecFile(ctx, submodulesDir, submoduleName, submoduleNameSnakeCase, summary, description, author, email, url);
     } catch (error) {
         throw error;
     }
 }
 
-// Make the following code available to the extension.js file
-module.exports = {
-    perform,
-}
+module.exports = { perform };

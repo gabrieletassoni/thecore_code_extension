@@ -1,141 +1,63 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+'use strict';
+
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const execSync = require('child_process').execSync;
+const { execSync } = require('child_process');
 
-function workspaceExixtence(outputChannel) {
-    outputChannel.appendLine('❓️ Checking if a workspace is open.');
-    // Before checking for devcontainer directory, we need to check if the workspace is open
-    if (vscode.workspace.workspaceFolders === undefined) {
-        outputChannel.appendLine(' ❌ No workspace is open. Please open a workspace and try again.');
-        return false;
-    }
-    outputChannel.appendLine(' ✅ A workspace is open.');
-    return true;
+function workspaceExixtence() {
+    return vscode.workspace.workspaceFolders !== undefined;
 }
 
-function workspaceEmptiness(outputChannel) {
-    outputChannel.appendLine('❓️ Checking if the workspace is empty.');
-    // Check if the workspace is empty
-    if (vscode.workspace.workspaceFolders.length > 1) {
-        outputChannel.appendLine(' ❌ The workspace is not empty. Please open an empty workspace and try again.');
-        return false;
-    }
-    outputChannel.appendLine(' ✅ The workspace is empty.');
-    return true;
+function workspaceEmptiness() {
+    return vscode.workspace.workspaceFolders.length <= 1;
 }
 
-function rubyOnRailsAppValidity(hideErrorMessage = false, outputChannel) {
-    outputChannel.appendLine('❓️ Checking if the workspace root is a Ruby on Rails app.');
-    // Check if the workspace root is a Ruby on Rails app
+function rubyOnRailsAppValidity(hideErrorMessage = false) {
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const appDir = path.join(workspaceRoot, 'app');
-    const binDir = path.join(workspaceRoot, 'bin');
-    const configDir = path.join(workspaceRoot, 'config');
-    const dbDir = path.join(workspaceRoot, 'db');
-    const libDir = path.join(workspaceRoot, 'lib');
-    const logDir = path.join(workspaceRoot, 'log');
-    const publicDir = path.join(workspaceRoot, 'public');
-    const storageDir = path.join(workspaceRoot, 'storage');
-    const testDir = path.join(workspaceRoot, 'test');
-    const tmpDir = path.join(workspaceRoot, 'tmp');
-    const vendorDir = path.join(workspaceRoot, 'vendor');
-    const dirsObject = {
-        workspaceRoot,
-        appDir,
-        binDir,
-        configDir,
-        dbDir,
-        libDir,
-        logDir,
-        publicDir,
-        storageDir,
-        testDir,
-        tmpDir,
-        vendorDir,
-    };
-    if (!fs.existsSync(appDir) || !fs.existsSync(binDir) || !fs.existsSync(configDir) || !fs.existsSync(dbDir) || !fs.existsSync(libDir) || !fs.existsSync(logDir) || !fs.existsSync(publicDir) || !fs.existsSync(storageDir) || !fs.existsSync(testDir) || !fs.existsSync(tmpDir) || !fs.existsSync(vendorDir)) {
-        if(!hideErrorMessage) outputChannel.appendLine(' ❌ The workspace root is not a Ruby on Rails app. Please open a Ruby on Rails app and try again.');
-        return false;
-    }
-    outputChannel.appendLine(' ✅ The workspace root is a Ruby on Rails app.');
+    const dirNames = ['app', 'bin', 'config', 'db', 'lib', 'log', 'public', 'storage', 'test', 'tmp', 'vendor'];
+    const allExist = dirNames.every(d => fs.existsSync(path.join(workspaceRoot, d)));
+    if (!allExist) return false;
+    const dirsObject = { workspaceRoot };
+    dirNames.forEach(d => { dirsObject[`${d}Dir`] = path.join(workspaceRoot, d); });
     return dirsObject;
 }
 
-function fileExistence(filePath, outputChannel) {
-    outputChannel.appendLine(`❓️ Checking if the file ${filePath} exists.`);
-    // Check if a file exists
-    if (!fs.existsSync(filePath)) {
-        outputChannel.appendLine(` ❌ The file ${filePath} does not exist.`);
-        return false;
-    }
-    outputChannel.appendLine(` ✅ The file ${filePath} exists.`);
-    return true;
+function fileExistence(filePath) {
+    return fs.existsSync(filePath);
 }
 
-function commandExistence(command, outputChannel) {
-    outputChannel.appendLine(`❓️ Checking if the command ${command} exists.`);
-    // This function checks if a command exists using execs, so it is OS agnostic, if it does not exist, it returns to the caller false, otherwise true
+function commandExistence(command) {
     try {
-        const stdout = execSync(`${command} --version`, { encoding: 'utf8', stdio: 'pipe' });
-        outputChannel.appendLine(` ✅ STDOUT: ${stdout}`);
+        execSync(`${command} --version`, { encoding: 'utf8', stdio: 'pipe' });
         return true;
-    } catch (error) {
-        outputChannel.appendLine(` ❌ The command ${command} does not exist:\n${error}`);
+    } catch {
         return false;
     }
 }
 
 const isPascalCase = (word) => {
-    if (typeof word !== 'string')
-    {
-      return 'It must be a string.'
-    }
-    const pattern = /^[A-Z][A-Za-z]*$/
-    return pattern.test(word)
-  }
+    if (typeof word !== 'string') return 'It must be a string.';
+    return /^[A-Z][A-Za-z]*$/.test(word);
+};
 
-const hasGemspec = (atomDir, atomName, outputChannel) => {
-    outputChannel.appendLine(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}: ${atomName}`);
-    // Get only the full path without the file schema
+const hasGemspec = (atomDir, atomName) => {
     const atomGemspec = path.join(atomDir, `${atomName}.gemspec`);
-    // In some cases, the atomName can have a variant name, for example, the atomName can have dashes, like "the-core-atom", in this case, the variantName will be "the_core_atom"
     const variantName = atomName.replace(/-/g, '_');
     const atomGemspecVariant = path.join(atomDir, `${variantName}.gemspec`);
-    if (fs.existsSync(atomGemspec)) {
-        // Nothing to do, the atomGemspec is already ok
-        return atomGemspec;
-    } else if (fs.existsSync(atomGemspecVariant)) {
-        return atomGemspecVariant;
-    } else {
-        const message = "The right clicked folder is not a valid Thecore 3 ATOM: I cannot find a valid gemspec file. Please select a Thecore 3 ATOM and try again."
-        outputChannel.appendLine(`❌ ${message}`);
-        return false;
-    }
-}
+    if (fs.existsSync(atomGemspec)) return atomGemspec;
+    if (fs.existsSync(atomGemspecVariant)) return atomGemspecVariant;
+    return false;
+};
 
-const isDir = (path, outputChannel) => {   
-    // fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();     
-    if (fs.existsSync(path) && fs.lstatSync(path).isDirectory()) {
-        return true;
-    } else {
-        outputChannel.appendLine(`❌ The folder ${path} does not exist or is a file.`);
-        return false;
-    }
-}
+const isDir = (dirPath) => {
+    return fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();
+};
 
-const isFile = (path, outputChannel) => {        
-    if (fs.existsSync(path) && fs.lstatSync(path).isFile()) {
-        return true;
-    } else {
-        outputChannel.appendLine(`❌ The file  ${path} does not exist or is a directory.`);
-        return false;
-    }
-}
+const isFile = (filePath) => {
+    return fs.existsSync(filePath) && fs.lstatSync(filePath).isFile();
+};
 
-// Make the following code available to the extension.js file
 module.exports = {
     workspaceExixtence,
     rubyOnRailsAppValidity,
@@ -145,5 +67,5 @@ module.exports = {
     isPascalCase,
     hasGemspec,
     isDir,
-    isFile
-}
+    isFile,
+};

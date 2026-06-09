@@ -3,93 +3,86 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
-
 const { perform } = require('../commands/addMemberAction');
-
-const ATOM_DIR = path.resolve(__dirname, 'samples/atom');
-
-function makeOutputChannel() {
-    return { show: () => {}, appendLine: () => {}, append: () => {} };
-}
+const { makeCtx, makeAtomWorkspace } = require('./helpers/makeCtx');
 
 describe('commands/addMemberAction', () => {
-    beforeEach(() => {
-        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
-        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
-    });
-
     afterEach(() => sinon.restore());
 
-    it('shows an error when atomDir is undefined', async () => {
+    it('shows an error when no folder was clicked (workspace is null)', async () => {
+        const ctx = makeCtx({ workspace: null });
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
-        await perform(undefined);
+        await perform(ctx);
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('right click'));
     });
 
     it('returns early when no workspace is open', async () => {
-        vscode.workspace.workspaceFolders = undefined;
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.workspaceExists.returns({ ok: false, message: 'No workspace' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
-        assert.ok(!infoStub.called, 'should not reach success message');
+        await perform(ctx);
+        assert.ok(!infoStub.called);
     });
 
     it('returns early when atomDir is not a directory', async () => {
-        const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.isDir.returns({ ok: false, message: 'Not a dir' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: gemspecPath });
-        assert.ok(!infoStub.called, 'should not reach success message');
+        await perform(ctx);
+        assert.ok(!infoStub.called);
     });
 
     it('returns early when lib/member_actions does not exist inside atomDir', async () => {
-        // Use the config dir which has no lib/member_actions inside it
-        const configDir = path.join(ATOM_DIR, 'config');
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        // First isDir call (atomDir itself) passes, second (memberActionsDir) fails
+        ctx.check.isDir
+            .onFirstCall().returns({ ok: true })
+            .onSecondCall().returns({ ok: false, message: 'lib/member_actions missing' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: configDir });
-        assert.ok(!infoStub.called, 'should not reach success message');
+        await perform(ctx);
+        assert.ok(!infoStub.called);
     });
 
     it('returns early when user cancels the input box', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('shows an error when the member action file already exists', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves('existing_action');
-        const realExistsSync = fs.existsSync.bind(fs);
-        sinon.stub(fs, 'existsSync').callsFake((p) => {
-            if (p.endsWith('existing_action.rb')) return true;
-            return realExistsSync(p);
-        });
+        sinon.stub(fs, 'existsSync').returns(true);
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('already exists'));
     });
 
     it('creates member action files and shows success on the happy path', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves('my_test_action');
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
         sinon.stub(fs, 'writeFileSync');
         sinon.stub(fs, 'appendFileSync');
-        sinon.stub(fs, 'mkdirSync');
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
 
         assert.ok(infoStub.calledOnce, 'success message should be shown');
         assert.ok(infoStub.firstCall.args[0].includes('my_test_action'));
     });
 
-    it('validates the action name: rejects invalid names', async () => {
-        // validateInput is called by vscode; simulate returning undefined for invalid input
-        // by having showInputBox resolve to undefined (user dismissed invalid input)
+    it('validates the action name: cancels when invalid input is given', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 });

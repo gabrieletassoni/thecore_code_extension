@@ -4,7 +4,7 @@ This file documents the codebase structure, conventions, and development workflo
 
 ## Project Overview
 
-A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, version `3.0.9`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Ruby on Rails applications and modular Rails engines called **ATOMs**. The extension generates boilerplate files, runs shell commands (e.g., `rails g model`), and enforces naming conventions.
+A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, version `3.1.6`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Ruby on Rails applications and modular Rails engines called **ATOMs**. The extension generates boilerplate files, runs shell commands (e.g., `rails g model`), and enforces naming conventions.
 
 - **Entry point:** `extension.js`
 - **Bundled output:** `out/main.js` (via esbuild, never edit this directly)
@@ -18,7 +18,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 ```
 .
 ├── extension.js              # Extension activation; registers all 7 commands
-├── commands/                 # One file per command, each exports perform()
+├── commands/                 # One file per command, each exports perform(ctx)
 │   ├── addMemberAction.js
 │   ├── addMigration.js
 │   ├── addModel.js
@@ -28,11 +28,14 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 │   ├── releaseApp.js         # Currently unused / commented out
 │   └── setupDevContainer.js
 ├── libs/                     # Shared utility modules
-│   ├── check.js              # Validation functions (workspace, Rails app, naming)
-│   ├── configs.js            # File-writing helpers (JSON, YAML, text, .gitignore)
-│   ├── helpers.js            # Case conversion (snakeToClassName)
+│   ├── check.js              # Pure validation predicates (no outputChannel)
+│   ├── commandRunner.js      # Guard-check and input-collection builder
+│   ├── configs.js            # Pure file-writing helpers (no outputChannel)
+│   ├── executionContext.js   # ExecutionContext, CheckContext, WriteContext
+│   ├── helpers.js            # Case conversion: snakeToClassName, railsStyleKey
 │   ├── os.js                 # Shell execution (execShell) and mkdir (mkDirP)
-│   └── templates.js          # Template rendering with {{key}} substitution
+│   ├── templates.js          # Template rendering with {{key}} substitution
+│   └── workspaceContext.js   # ATOMContext / AppContext factory
 ├── templates/                # Static template files used by commands
 │   ├── addMemberAction/      # action.rb, action.js, action.html.erb
 │   ├── addModel/             # api_concern.rb, endpoints_concern.rb, rails_admin_concern.rb
@@ -42,6 +45,8 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 ├── test/                     # Mocha test suite
 │   ├── setup.js              # Global require hook — intercepts require('vscode')
 │   ├── vscode.mock.js        # Lightweight VSCode API mock
+│   ├── helpers/
+│   │   └── makeCtx.js        # Stub factory: makeCtx(), makeAtomWorkspace(), makeAppWorkspace()
 │   ├── *.test.js             # One test file per command
 │   ├── libs/                 # Unit tests for libs/
 │   └── samples/atom/         # Fixture: a minimal ATOM directory for tests
@@ -52,7 +57,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 ├── package.json
 ├── .eslintrc.json
 ├── .mocharc.yml
-├── .npmrc                    # Sets tag-version-prefix= so npm version tags as "3.0.12" not "v3.0.12"
+├── .npmrc                    # Sets tag-version-prefix= so npm version tags as "3.1.6" not "v3.1.6"
 ├── jsconfig.json
 └── out/                      # Build output (git-ignored, never edit)
 ```
@@ -61,7 +66,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 
 ## Commands
 
-All commands are registered in `extension.js` using lazy `require()` and each implementation lives in `commands/<name>.js` exporting a single `perform(folder?)` function.
+All commands are registered in `extension.js`. Each creates an `ExecutionContext` for the invocation and calls `perform(ctx)` on the command module.
 
 | Command ID | File | Context |
 |---|---|---|
@@ -73,89 +78,165 @@ All commands are registered in `extension.js` using lazy `require()` and each im
 | `thecore.addMemberAction` | `addMemberAction.js` | Inside `vendor/submodules/` (ATOM root) |
 | `thecore.addMigration` | `addMigration.js` | Inside `vendor/submodules/` (ATOM root) |
 
-Context is controlled in `package.json` via `contributes.menus["explorer/context"][].when` expressions — do not change these unless you understand the VSCode `when` clause syntax.
+Context is controlled in `package.json` via `contributes.menus["explorer/context"][].when` expressions.
 
 ---
 
 ## Key Libraries
 
+### `libs/executionContext.js`
+
+The central deep module. Commands receive a single `ExecutionContext ctx` that owns everything needed for one command invocation:
+
+- **`ctx.workspace`** — `ATOMContext | AppContext | null` from `workspaceContext.from(folder)`
+- **`ctx.check`** — `CheckContext` instance with methods returning `{ ok, value?, message? }`:
+  - `workspaceExists()`, `workspaceEmpty()`, `railsAppValid(hideError?)`, `fileExists(path)`, `commandExists(cmd)`, `isDir(path)`, `isFile(path)`, `hasGemspec(atomDir, atomName)`
+- **`ctx.write`** — `WriteContext` instance with methods that log and write files:
+  - `textFile(dir, name, content)`, `yamlFile(dir, name, obj)`, `jsonFile(dir, name, obj)`, `gitignoreFile(dir)`, `mergeYaml(dir, file, action, titleCase, rootEl)`
+- **`ctx.log(msg)`** / **`ctx.show()`** — output channel helpers
+- **`ctx.exec(cmd, cwd)`** — async shell execution
+- **`ctx.mkdir(dir)`** — recursive mkdir
+
+`CheckContext` delegates to `check.js` (pure predicates). `WriteContext` delegates to `configs.js` (pure I/O) and adds logging via `ctx.log()`.
+
+### `libs/commandRunner.js`
+
+Imperative builder for the two patterns that appear in every command:
+
+```js
+const runner = new CommandRunner(ctx);
+const showErr = msg => vscode.window.showErrorMessage(msg);
+
+// Guard check — calls showErr on failure, returns false
+if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
+
+// User input — returns null on cancel or empty (required) input
+const name = await runner.input({ prompt, placeHolder, validate, optional });
+if (!name) return;
+```
+
+### `libs/workspaceContext.js`
+
+Factory and two adapter classes for the discriminated workspace type:
+
+- `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`
+- **`ATOMContext`** — folder directly inside `vendor/submodules/`; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
+- **`AppContext`** — all other folders; exposes `modelDir()`, `migrationDir()`, `concernsDir(type)`, `appRoot()`
+- Both expose `type()` (`'atom'` or `'app'`), `targetDir()`
+
 ### `libs/check.js`
-Validation functions, all taking an `outputChannel` for user-visible logging:
 
-- `workspaceExixtence(outputChannel)` — checks `vscode.workspace.workspaceFolders` is defined (note: the typo `Exixtence` is intentional/legacy — do not rename)
-- `workspaceEmptiness(outputChannel)` — ensures exactly one workspace folder
-- `rubyOnRailsAppValidity(hideErrorMessage, outputChannel)` — validates standard Rails directory structure; returns a `dirsObject` on success or `false`
-- `fileExistence(filePath, outputChannel)` — wraps `fs.existsSync`
-- `commandExistence(command, outputChannel)` — runs `<command> --version` via `execSync`
-- `isPascalCase(word)` — validates model names; pattern: `/^[A-Z][A-Za-z]*$/`
-- `hasGemspec(atomDir, atomName, outputChannel)` — validates ATOM by checking for a `.gemspec` file (handles dash-to-underscore variant names)
-- `isDir(path, outputChannel)` / `isFile(path, outputChannel)` — type checks
+Pure validation predicates — **no `outputChannel` parameter**. Return values only; callers handle messaging.
 
-### `libs/os.js`
-- `execShell(cmd, workingDirectory, outputChannel)` — async shell execution via `child_process.exec`; streams dots to the output channel while running; resolves/rejects with stdout/stderr
-- `mkDirP(dir, outputChannel)` — recursive `mkdir`; also creates a `.keep` file inside newly created directories
-
-### `libs/templates.js`
-- `renderTemplate(templateRelPath, vars)` — reads a file from `templates/<templateRelPath>` and replaces all `{{key}}` occurrences with values from `vars`
+- `workspaceExixtence()` — returns `true/false` (note: legacy typo preserved)
+- `workspaceEmptiness()` — returns `true/false`
+- `rubyOnRailsAppValidity(hideErrorMessage?)` — returns a `dirsObject` or `false`
+- `fileExistence(filePath)` — wraps `fs.existsSync`
+- `commandExistence(command)` — runs `<command> --version` via `execSync`
+- `isPascalCase(word)` — returns `true/false` or a string error for non-string input
+- `hasGemspec(atomDir, atomName)` — returns gemspec path or `false`
+- `isDir(path)` / `isFile(path)` — type checks
 
 ### `libs/configs.js`
-- `writeJSONFile(filePath, content, outputChannel)`
-- `writeYAMLFile(filePath, content, outputChannel)` — uses `js-yaml`
-- `writeTextFile(filePath, content, outputChannel)`
-- `createGitignoreFile(dir, outputChannel)` — uses `templates/shared/gitignore`
-- `mergeYmlContent(filePath, newContent, outputChannel)` — deep-merges YAML using `lodash.merge`
+
+Pure file I/O helpers — **no `outputChannel` parameter**. Write files; callers handle logging.
+
+- `writeJSONFile(dir, file, obj)`, `writeYAMLFile(dir, file, obj)`, `writeTextFile(dir, file, content)`, `createGitignoreFile(dir)`, `mergeYmlContent(ymlDir, file, action, titleCase, root)`
 
 ### `libs/helpers.js`
+
 - `snakeToClassName(snake)` — converts `snake_case` to `ClassName`
+- `railsStyleKey(str)` — converts a human-readable title (`'My Project'`) to Rails-style snake\_case key (`'my_project'`)
+
+### `libs/os.js`
+
+- `execShell(cmd, workingDirectory, outputChannel)` — async shell execution; streams dots while running
+- `mkDirP(dir, outputChannel)` — recursive `mkdir`; creates a `.keep` file in new directories
+
+### `libs/templates.js`
+
+- `renderTemplate(templateRelPath, vars)` — reads `templates/<path>`, replaces all `{{key}}` with values from `vars`
 
 ---
 
 ## Templates
 
-Templates live in `templates/` and use `{{key}}` as placeholder syntax (no logic, pure substitution via `renderTemplate`). When adding a new template:
+Templates live in `templates/` using `{{key}}` placeholder syntax. When adding a template:
 
-1. Create the file under the appropriate `templates/<command>/` subdirectory.
-2. Use `{{variableName}}` for dynamic values.
-3. Call `renderTemplate('command/file.ext', { variableName: value })` from the command file.
-4. Never hardcode file content inline in command files — always extract to a template.
+1. Create the file under `templates/<command>/`.
+2. Call `renderTemplate('command/file.ext', { key: value })` from the command file.
+3. Never hardcode file content inline — always use a template.
 
 ---
 
 ## Conventions
 
+### Command Structure
+
+Every command follows this pattern:
+
+```js
+async function perform(ctx) {
+    // 1. Workspace-null guard (before ctx.show)
+    if (!ctx.workspace) { vscode.window.showErrorMessage('Please right click...'); return; }
+
+    ctx.show();
+    ctx.log('Starting operation...');
+
+    const runner = new CommandRunner(ctx);
+    const showErr = msg => vscode.window.showErrorMessage(msg);
+
+    // 2. Guard checks via runner
+    if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
+
+    try {
+        // 3. Remaining checks + inputs + logic
+        if (!runner.check(ctx.check.isDir(...), showErr)) return;
+        const name = await runner.input({ prompt: '...', validate: v => ... });
+        if (!name) return;
+
+        // 4. Actual work
+        await ctx.exec(...);
+        ctx.write.textFile(...);
+        vscode.window.showInformationMessage('Success!');
+    } catch (error) {
+        ctx.log(`❌ ...`);
+        vscode.window.showErrorMessage(`...`);
+    }
+}
+```
+
 ### Naming
+
 - **Command files:** `camelCase` (e.g., `addModel.js`, `setupDevContainer.js`)
 - **Model names (user input):** must be `PascalCase` — validated via `isPascalCase()`
-- **Ruby concern modules:** `Api::<Model>`, `RailsAdmin::<Model>`, `Endpoints::<Model>`
-- **ATOM gemspec:** `<atom-name>.gemspec` or `<atom_name>.gemspec` (dash/underscore variant handled by `hasGemspec`)
+- **ATOM gemspec:** `<atom-name>.gemspec` or `<atom_name>.gemspec` (handled by `hasGemspec`)
 
-### OutputChannel Logging
-Every user-visible operation logs to a VSCode `OutputChannel` using emoji prefixes:
+### Logging
+
+Every user-visible operation logs to the `ExecutionContext` output channel via `ctx.log(msg)`. Use emoji prefixes:
 - `❓️` — checking/validating
 - `✅` — success
 - `❌` — error/failure
 - `⌛` — running a command
+- `📝` — writing a file
+- `📄` — moving/creating a file
 
-All functions that log accept `outputChannel` as a parameter (never use `console.log` for user output).
+Never use `console.log` for user output. Never pass `outputChannel` to `check.js` or `configs.js` functions.
 
 ### Error Handling
-- Commands use `try/catch` at the top level.
-- Validation functions return `false` on failure (they log internally); callers must check the return value and return early.
-- `execShell` rejects the promise on non-zero exit codes.
 
-### Adding a New Command
-1. Create `commands/<newCommand>.js` exporting `perform(folder?)`.
-2. Register in `extension.js`: `context.subscriptions.push(vscode.commands.registerCommand('thecore.<newCommand>', ...))`.
-3. Declare in `package.json` under both `contributes.commands` and `contributes.menus["explorer/context"]` with the appropriate `when` clause.
-4. Add tests in `test/<newCommand>.test.js`.
+- Commands use `runner.check(result, showErr)` for guard checks — it calls `showErr` and returns `false` on failure.
+- Commands use a top-level `try/catch` around I/O operations.
+- `execShell` rejects on non-zero exit codes.
 
 ---
 
 ## Testing
 
-**Rule: Always add or update tests when adding or modifying any function.** This applies to command files (`commands/`), library functions (`libs/`), and any new exported function. A change without a corresponding test is incomplete.
+**Rule: Always add or update tests when adding or modifying any function.**
 
-**Framework:** Mocha + Sinon + proxyquire
+**Framework:** Mocha + Sinon (no proxyquire needed for command tests)
 
 **Run tests:**
 ```bash
@@ -164,10 +245,21 @@ npm run test:vscode  # Full VS Code integration tests
 ```
 
 **Key test infrastructure:**
-- `test/setup.js` — registered as a Mocha `require` file (see `.mocharc.yml`); installs a `require` hook so `require('vscode')` returns the mock instead of the real VS Code API
-- `test/vscode.mock.js` — minimal stub of the VS Code API (workspace, window, commands, Uri, etc.)
-- Tests use `proxyquire` to inject stubs for `vscode` and other modules
-- `test/samples/atom/` — a fixture directory with a real-ish ATOM structure (gemspec, config/locales, lib/) used by ATOM-related tests
+
+- `test/setup.js` — Mocha `require` file; installs a hook so `require('vscode')` returns the mock
+- `test/vscode.mock.js` — minimal stub of the VS Code API
+- `test/helpers/makeCtx.js` — exports `makeCtx(overrides?)`, `makeAtomWorkspace(overrides?)`, `makeAppWorkspace(overrides?)`, `FAKE_ROOT`, `ATOM_DIR`. Provides a plain stub `ExecutionContext` with sinon stubs for all `ctx.check.*` and `ctx.write.*` methods.
+- `test/samples/atom/` — fixture ATOM directory with real gemspec, locales, lib/
+
+**Command tests** (in `test/*.test.js`):
+- Use `makeCtx()` directly — no proxyquire, no `fs` stubs for guard paths
+- Override check stubs to test failure: `ctx.check.isDir.returns({ ok: false, message: 'err' })`
+- Stub `vscode.window.showInputBox` for input flows (CommandRunner delegates to it)
+
+**Library tests** (in `test/libs/*.test.js`):
+- Use proxyquire only for OS-level tests (`os.test.js`)
+- Stub `fs` / `vscode` directly for `check.test.js` and `executionContext.test.js`
+- `check.test.js` calls may pass extra args (legacy `oc()`) — these are silently ignored
 
 **Mocha config (`.mocharc.yml`):**
 ```yaml
@@ -176,8 +268,6 @@ require:
 spec: "test/**/*.test.js"
 timeout: 10000
 ```
-
-When adding tests for a new command, follow the pattern in existing test files: use `proxyquire` to load the command with mocked dependencies, then test the `perform()` function.
 
 ---
 
@@ -190,19 +280,13 @@ npm run package  # vsce package → .vsix
 npm run deploy   # vsce publish to Marketplace
 ```
 
-The build bundles `extension.js` and all `commands/`, `libs/`, and `templates/` into `out/main.js`. The `vscode` module is marked external and never bundled.
-
 ---
 
 ## Release Process
 
-Releases are automated via `.github/workflows/main.yml`. The version lives in exactly one place — `package.json` — and is never typed manually elsewhere.
+Releases are automated via `.github/workflows/main.yml`. The version lives in exactly one place — `package.json`.
 
 ### Releasing (use the terminal, not VS Code Source Control)
-
-**Do not use the VS Code Source Control panel to release.** It cannot create the git tag, so you would end up pushing a commit without a tag (no release triggered) or mismatching the tag against the version in `package.json`.
-
-Instead, use the npm release scripts from a terminal. They atomically bump `package.json`, commit, tag, and push in one step:
 
 ```bash
 npm run release:patch   # x.y.Z → x.y.(Z+1)  — bug fixes
@@ -210,22 +294,15 @@ npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
 npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
 ```
 
-Each command runs `npm version <level>` (which updates `package.json`, commits, and creates a tag) followed by `git push --follow-tags` (which pushes both the commit and the tag in one go).
-
-### What happens next
-
-Once the tag is pushed, GitHub Actions:
-1. Runs tests (`npm test`) — if they fail, publishing is aborted.
-2. Packages the extension (`vsce package` → `.vsix`).
-3. Creates a GitHub Release with the `.vsix` attached.
+Each command runs `npm version <level>` (updates `package.json`, commits, creates a tag) then `git push --follow-tags`. GitHub Actions then: runs tests → packages extension → creates GitHub Release with `.vsix`.
 
 ### Why no `v` prefix on tags
 
-`.npmrc` sets `tag-version-prefix=` (empty). This keeps tags in the format `3.0.12` to match the CI trigger pattern `[0-9]+.[0-9]+.[0-9]+`. Do not remove this setting.
+`.npmrc` sets `tag-version-prefix=` (empty). Tags are `3.1.6` to match the CI trigger pattern `[0-9]+.[0-9]+.[0-9]+`.
 
 ### Secret required
 
-The `VSCE_PAT` secret must be set in the GitHub repository. It is an Azure DevOps Personal Access Token scoped to **Marketplace → Manage**.
+`VSCE_PAT` must be set in GitHub repository secrets — an Azure DevOps PAT with Marketplace → Manage scope.
 
 ---
 
@@ -237,7 +314,7 @@ The `VSCE_PAT` secret must be set in the GitHub repository. It is an Azure DevOp
 | `lodash` | runtime | `merge` for deep YAML merging |
 | `mocha` | dev | Test runner |
 | `sinon` | dev | Stubs/mocks in tests |
-| `proxyquire` | dev | Module injection in tests |
+| `proxyquire` | dev | Module injection in tests (OS-level tests only) |
 | `esbuild` | dev | Fast bundler |
 | `eslint` | dev | Linting |
 | `prettier` | dev | Formatting |
@@ -247,7 +324,8 @@ The `VSCE_PAT` secret must be set in the GitHub repository. It is an Azure DevOp
 
 ## Known Quirks
 
-- `workspaceExixtence` has a typo (`Exixtence` not `Existence`) — this is the existing exported name; do not rename it without updating all callers and tests.
-- `releaseApp.js` exists but its command is commented out in `extension.js` — do not activate it without understanding why it was disabled.
-- The `fmt` script in `package.json` targets `src/**/*.ts` which does not exist in this project; it is effectively a no-op for TypeScript files but the ESLint part still runs.
-- `mkDirP` always creates a `.keep` file in newly created directories — this is intentional for Git tracking of empty directories.
+- `workspaceExixtence` has a typo (`Exixtence` not `Existence`) — this is the existing exported name; do not rename without updating all callers and tests.
+- `rubyOnRailsAppValidity` accepts a `hideErrorMessage` first parameter — retained for API compatibility but has no effect since the function is now pure (it never logged anyway after migration).
+- `releaseApp.js` exists but its command is commented out in `extension.js` — do not activate without understanding why it was disabled.
+- The `fmt` script in `package.json` targets `src/**/*.ts` (no-op for this project's JS files).
+- `mkDirP` always creates a `.keep` file in newly created directories — intentional for Git tracking.

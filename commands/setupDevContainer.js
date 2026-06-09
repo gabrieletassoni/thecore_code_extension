@@ -1,68 +1,58 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+'use strict';
+
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { workspaceExixtence } = require('../libs/check');
-const { writeTextFile, railsStyleKey } = require('../libs/configs');
 const { renderTemplate } = require('../libs/templates');
+const { railsStyleKey } = require('../libs/helpers');
+const { CommandRunner } = require('../libs/commandRunner');
 
-// The code you place here will be executed every time your command is executed
-/**
- * Sets up a Thecore 3 Devcontainer.
- */
-async function perform() {
-    // Switches the VS Code Window to Output panel like the user would do manually to the specific output channel called Thecore, if it does not exist, the channel will be created
-    const outputChannel = vscode.window.createOutputChannel('Thecore: Setup Devcontainer');
-    outputChannel.show();
-    outputChannel.appendLine('Setting up a Thecore 3 Devcontainer.');
+async function perform(ctx) {
+    ctx.show();
+    ctx.log('Setting up a Thecore 3 Devcontainer.');
 
-    // Call the checkWorkspace function from the checks.js file, if it's not ok, return
-    if (!workspaceExixtence(outputChannel)) { return; }
+    const runner = new CommandRunner(ctx);
+    const showErr = msg => vscode.window.showErrorMessage(msg);
 
-    // Checking if the .devcontainer directory is present in the root of the vs code workspace and creating it if not
-    const devcontainerDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.devcontainer');
+    if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
+
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const devcontainerDir = path.join(workspaceRoot, '.devcontainer');
+
     if (!fs.existsSync(devcontainerDir)) {
         try {
             fs.mkdirSync(devcontainerDir);
-            outputChannel.appendLine('.devcontainer directory not exists, creating it right now.');
+            ctx.log('.devcontainer directory not exists, creating it right now.');
 
-            // Asking the user for the name of the devcontainer
-            const devcontainerName = await vscode.window.showInputBox({
-                ignoreFocusOut: true,
+            const devcontainerName = await runner.input({
                 prompt: 'Please enter the name of this project, i.e. Thecore Backend.',
-            })
-            // transform the devcontainerNAme in a form compatible with the output from rails' .titleize.gsub(/[^0-9a-z]/i, '').underscore
+            });
 
+            ctx.write.textFile(devcontainerDir, 'devcontainer.json',
+                renderTemplate('setupDevContainer/devcontainer.json', { name: devcontainerName }));
 
-            // Writing the devcontainer.json file
-            writeTextFile(devcontainerDir, 'devcontainer.json', renderTemplate('setupDevContainer/devcontainer.json', { name: devcontainerName }), outputChannel);
+            ctx.write.textFile(devcontainerDir, 'docker-compose.yml',
+                renderTemplate('setupDevContainer/docker-compose.yml', { name: railsStyleKey(devcontainerName) }));
 
-            // Creating the docker-compose.yml file inside the .devcontainer directory
-            writeTextFile(devcontainerDir, 'docker-compose.yml', renderTemplate('setupDevContainer/docker-compose.yml', { name: railsStyleKey(devcontainerName) }), outputChannel);
+            ctx.write.textFile(devcontainerDir, 'Dockerfile',
+                renderTemplate('setupDevContainer/Dockerfile'));
 
-            // Creating the Dockerfile file inside the .devcontainer directory
-            writeTextFile(devcontainerDir, 'Dockerfile', renderTemplate('setupDevContainer/Dockerfile'), outputChannel);
+            ctx.write.textFile(devcontainerDir, 'create-db-user.sql',
+                renderTemplate('setupDevContainer/create-db-user.sql'));
 
-            // Creating the create-db-user.sql file inside the .devcontainer directory
-            writeTextFile(devcontainerDir, 'create-db-user.sql', renderTemplate('setupDevContainer/create-db-user.sql'), outputChannel);
+            ctx.write.textFile(devcontainerDir, 'backend.code-workspace',
+                renderTemplate('setupDevContainer/backend.code-workspace'));
 
-            // Create the backend.code-workspace file
-            writeTextFile(devcontainerDir, 'backend.code-workspace', renderTemplate('setupDevContainer/backend.code-workspace'), outputChannel);
-
-            outputChannel.appendLine('✅ .devcontainer directory created successfully.');
+            ctx.log('✅ .devcontainer directory created successfully.');
             vscode.window.showInformationMessage('✅ .devcontainer directory created successfully.');
         } catch (error) {
-            outputChannel.appendLine(`❌ Error while creating the .devcontainer directory: ${error}`);
+            ctx.log(`❌ Error while creating the .devcontainer directory: ${error}`);
             vscode.window.showErrorMessage(`Error while creating the .devcontainer directory: ${error}`);
         }
     } else {
-        outputChannel.appendLine('❌ .devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
+        ctx.log('❌ .devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
         vscode.window.showWarningMessage('❌ .devcontainer directory already exists. I won\'t create it again since there could be a working configuration already setup.');
     }
 }
 
-// Make the following code available to the extension.js file
-module.exports = {
-    perform,
-}
+module.exports = { perform };

@@ -3,89 +3,70 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
-const proxyquire = require('proxyquire');
-
-const ATOM_DIR = path.resolve(__dirname, 'samples/atom');
-
-function makeOutputChannel() {
-    return { show: () => {}, appendLine: () => {}, append: () => {} };
-}
+const { perform } = require('../commands/addMigration');
+const { makeCtx, makeAtomWorkspace } = require('./helpers/makeCtx');
 
 describe('commands/addMigration', () => {
-    let execShellStub, mkDirPStub, perform;
-
-    before(() => {
-        execShellStub = sinon.stub();
-        mkDirPStub = sinon.stub();
-        perform = proxyquire('../commands/addMigration', {
-            '../libs/os': { execShell: execShellStub, mkDirP: mkDirPStub },
-        }).perform;
-    });
-
-    beforeEach(() => {
-        vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/fake/workspace' } }];
-        sinon.stub(vscode.window, 'createOutputChannel').returns(makeOutputChannel());
-        execShellStub.reset();
-        mkDirPStub.reset();
-    });
-
     afterEach(() => sinon.restore());
 
-    it('shows an error when atomDir is undefined', async () => {
+    it('shows an error when no folder was clicked (workspace is null)', async () => {
+        const ctx = makeCtx({ workspace: null });
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
-        await perform(undefined);
+        await perform(ctx);
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('right click'));
     });
 
     it('returns early when no workspace is open', async () => {
-        vscode.workspace.workspaceFolders = undefined;
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.workspaceExists.returns({ ok: false, message: 'No workspace' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when atomDir is not a directory', async () => {
-        const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.isDir.returns({ ok: false, message: 'Not a dir' });
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: gemspecPath });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('returns early when user cancels migration name input', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
         assert.ok(!infoStub.called);
     });
 
     it('shows an error when execShell produces no output', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.exec.resolves(null);
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('AddNameToUsers')
             .onSecondCall().resolves('name:string');
-        execShellStub.resolves(null);
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
 
         assert.ok(errorStub.calledOnce);
     });
 
     it('moves migration files to the ATOM db/migrate folder on success', async () => {
         const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.exec.resolves(migrationOutput);
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('AddNameToUsers')
             .onSecondCall().resolves('name:string');
-        execShellStub.resolves(migrationOutput);
-
-        // Stub only renameSync to avoid touching the filesystem; let existsSync use
-        // the real implementation so isDir / hasGemspec work against the fixture.
+        sinon.stub(fs, 'existsSync').returns(false);
         const renameSyncStub = sinon.stub(fs, 'renameSync');
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        await perform({ fsPath: ATOM_DIR });
+        await perform(ctx);
 
         assert.ok(renameSyncStub.calledOnce, 'migration file should be moved');
         assert.ok(infoStub.calledOnce, 'success message should be shown');
