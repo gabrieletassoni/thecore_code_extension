@@ -8,25 +8,34 @@ const { CommandRunner } = require('../libs/commandRunner');
 
 async function perform(ctx) {
     if (!ctx.workspace) {
-        vscode.window.showErrorMessage('Please right click on the ATOM folder and select Add member action.');
+        vscode.window.showErrorMessage('Please open a workspace and right click on an ATOM folder or a main app folder, then select Add member action.');
         return;
     }
 
     ctx.show();
-    ctx.log('Adding a member action to the current ATOM.');
 
     const runner = new CommandRunner(ctx);
     const showErr = msg => vscode.window.showErrorMessage(msg);
 
     if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
 
-    try {
-        const atomDir = ctx.workspace.atomDir;
-        ctx.log(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
+    const isAtom = ctx.workspace.type() === 'atom';
 
-        if (!runner.check(ctx.check.isDir(atomDir), showErr)) return;
-        if (!runner.check(ctx.check.isDir(ctx.workspace.memberActionsDir()), showErr)) return;
-        if (!runner.check(ctx.check.hasGemspec(atomDir, ctx.workspace.atomName), showErr)) return;
+    try {
+        if (isAtom) {
+            ctx.log('Adding a member action to the current ATOM.');
+            const atomDir = ctx.workspace.atomDir;
+            ctx.log(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
+
+            if (!runner.check(ctx.check.isDir(atomDir), showErr)) return;
+            if (!runner.check(ctx.check.isDir(ctx.workspace.memberActionsDir()), showErr)) return;
+            if (!runner.check(ctx.check.hasGemspec(atomDir, ctx.workspace.atomName), showErr)) return;
+        } else {
+            ctx.log('Adding a member action to the main app.');
+            ctx.log('🔍 Checking if the workspace root is a valid Ruby on Rails app.');
+            if (!runner.check(ctx.check.railsAppValid(), showErr)) return;
+            ctx.mkdir(ctx.workspace.memberActionsDir());
+        }
 
         const memberActionName = await runner.input({
             prompt: 'Please enter the snake_case name of the member action.',
@@ -54,11 +63,19 @@ async function perform(ctx) {
             renderTemplate('addMemberAction/action.html.erb', { actionName: memberActionName }));
 
         const afterInitializeFile = ctx.workspace.initializerFile('after_initialize.rb');
+        if (!fs.existsSync(afterInitializeFile)) {
+            ctx.write.textFile(path.dirname(afterInitializeFile), 'after_initialize.rb',
+                renderTemplate('createATOM/after_initialize.rb'));
+        }
+        // The main app's lib folder is not on the load path, so require by full path there.
+        const requireLine = isAtom
+            ? `require 'member_actions/${memberActionName}'`
+            : `require Rails.root.join('lib', 'member_actions', '${memberActionName}').to_s`;
         const afterInitializeContent = fs.readFileSync(afterInitializeFile).toString();
-        if (!afterInitializeContent.includes(`require 'member_actions/${memberActionName}'`)) {
+        if (!afterInitializeContent.includes(requireLine)) {
             const lines = afterInitializeContent.split('\n');
             const idx = lines.findIndex(l => l.includes('config.after_initialize do'));
-            lines.splice(idx + 1, 0, `        require 'member_actions/${memberActionName}'`);
+            lines.splice(idx + 1, 0, `        ${requireLine}`);
             fs.writeFileSync(afterInitializeFile, lines.join('\n'));
             ctx.log(`The member action require line has been added to the ${afterInitializeFile} file.`);
         } else {
@@ -66,6 +83,9 @@ async function perform(ctx) {
         }
 
         const assetsFile = ctx.workspace.assetsFile();
+        if (!fs.existsSync(assetsFile)) {
+            ctx.write.textFile(path.dirname(assetsFile), 'assets.rb', renderTemplate('createATOM/assets.rb'));
+        }
         const assetsContent = fs.readFileSync(assetsFile).toString();
         const assetsLine = `Rails.application.config.assets.precompile += %w( rails_admin/actions/${memberActionName}.js rails_admin/actions/${memberActionName}.css )`;
         if (!assetsContent.includes(assetsLine)) {
@@ -75,14 +95,21 @@ async function perform(ctx) {
             ctx.log(`The member action assets precompile line is already present in the ${assetsFile} file.`);
         }
 
+        ctx.mkdir(ctx.workspace.cssAssetsDir());
         ctx.write.textFile(ctx.workspace.cssAssetsDir(), `${memberActionName}.scss`,
             renderTemplate('shared/action.scss', { actionName: memberActionName }));
 
+        ctx.mkdir(ctx.workspace.jsAssetsDir());
         ctx.write.textFile(ctx.workspace.jsAssetsDir(), `${memberActionName}.js`,
             renderTemplate('addMemberAction/action.js', { actionName: memberActionName, actionNameCamelCase: memberActionNameCamelCase }));
 
         const memberActionNameTitleCase = memberActionName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         const localesDir = ctx.workspace.localesDir();
+        [['en.yml', 'en'], ['it.yml', 'it']].forEach(([file, lang]) => {
+            if (!fs.existsSync(path.join(localesDir, file))) {
+                ctx.write.yamlFile(localesDir, file, { [lang]: null });
+            }
+        });
         ctx.write.mergeYaml(localesDir, 'en.yml', memberActionName, memberActionNameTitleCase, 'en');
         ctx.write.mergeYaml(localesDir, 'it.yml', memberActionName, memberActionNameTitleCase, 'it');
 

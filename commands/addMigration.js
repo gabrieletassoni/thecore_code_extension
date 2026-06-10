@@ -8,24 +8,32 @@ const { CommandRunner } = require('../libs/commandRunner');
 
 async function perform(ctx) {
     if (!ctx.workspace) {
-        vscode.window.showErrorMessage('Please right click on the ATOM folder and select Add migration.');
+        vscode.window.showErrorMessage('Please open a workspace and right click on an ATOM folder or a main app folder, then select Add migration.');
         return;
     }
 
     ctx.show();
-    ctx.log('Adding a migration to the current ATOM.');
 
     const runner = new CommandRunner(ctx);
     const showErr = msg => vscode.window.showErrorMessage(msg);
 
     if (!runner.check(ctx.check.workspaceExists(), showErr)) return;
 
-    try {
-        const atomDir = ctx.workspace.atomDir;
-        ctx.log(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
+    const isAtom = ctx.workspace.type() === 'atom';
 
-        if (!runner.check(ctx.check.isDir(atomDir), showErr)) return;
-        if (!runner.check(ctx.check.hasGemspec(atomDir, ctx.workspace.atomName), showErr)) return;
+    try {
+        if (isAtom) {
+            ctx.log('Adding a migration to the current ATOM.');
+            const atomDir = ctx.workspace.atomDir;
+            ctx.log(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
+
+            if (!runner.check(ctx.check.isDir(atomDir), showErr)) return;
+            if (!runner.check(ctx.check.hasGemspec(atomDir, ctx.workspace.atomName), showErr)) return;
+        } else {
+            ctx.log('Adding a migration to the main app.');
+            ctx.log('🔍 Checking if the workspace root is a valid Ruby on Rails app.');
+            if (!runner.check(ctx.check.railsAppValid(), showErr)) return;
+        }
 
         const migrationName = await runner.input({
             prompt: 'Please enter the PascalCase name of the migration.',
@@ -62,13 +70,18 @@ async function perform(ctx) {
 
         migrationFiles.forEach(el => {
             const srcPath = path.join(ctx.workspace.appRoot(), el[1]);
-            const targetDir = ctx.workspace.migrationDir();
-            if (!fs.existsSync(targetDir)) {
-                ctx.log(`📁 Creating the migrations folder: ${targetDir}`);
-                ctx.mkdir(targetDir);
+            if (isAtom) {
+                const targetDir = ctx.workspace.migrationDir();
+                if (!fs.existsSync(targetDir)) {
+                    ctx.log(`📁 Creating the migrations folder: ${targetDir}`);
+                    ctx.mkdir(targetDir);
+                }
+                ctx.log(`📄 Moving the migration file to the migrations folder: ${srcPath}`);
+                fs.renameSync(srcPath, path.join(targetDir, path.basename(srcPath)));
+            } else {
+                // In the main app the migration is already in db/migrate — no move needed.
+                ctx.log(`📄 Migration created at: ${srcPath}`);
             }
-            ctx.log(`📄 Moving the migration file to the migrations folder: ${srcPath}`);
-            fs.renameSync(srcPath, path.join(targetDir, path.basename(srcPath)));
         });
 
         ctx.log(`✅ The migration ${migrationName} has been added successfully.`);

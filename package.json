@@ -41,23 +41,19 @@
         },
         {
           "command": "thecore.addModel",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         },
         {
           "command": "thecore.addRootAction",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         },
         {
           "command": "thecore.addMemberAction",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         },
         {
           "command": "thecore.addMigration",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
-        },
-        {
-          "command": "thecore.addModel",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         }
       ]
     },

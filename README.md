@@ -18,7 +18,7 @@ Download the `.vsix` file from the [Releases page](https://github.com/gabrieleta
 
 Commands are accessible from the explorer context menu (right-click) and from the Command Palette.
 
-### Main application context
+### Main application only
 
 These commands appear when right-clicking on any folder **outside** `vendor/submodules/`.
 
@@ -27,16 +27,15 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 | `thecore.setupDevcontainer` | Thecore 3: Setup Devcontainer | Creates the `.devcontainer` configuration (Dockerfile, docker-compose) for the current workspace. |
 | `thecore.createApp` | Thecore 3: Create an App | Scaffolds a new Thecore 3 Rails application with all required dependencies and folder structure. |
 | `thecore.createATOM` | Thecore 3: Create an ATOM | Creates a new Rails engine (ATOM) as a reusable, self-contained submodule. |
-| `thecore.addModel` | Thecore 3: Add a Model | Generates a Rails model with its migration and the standard Thecore concern structure (`Api`, `RailsAdmin`, `Endpoints`) directly in the main application. |
 
-### ATOM context
+### Main application and ATOM context
 
-These commands appear when right-clicking on a folder **directly inside** `vendor/submodules/` (i.e., on an ATOM root folder).
+These commands appear when right-clicking on any folder. Right-clicking on a folder **directly inside** `vendor/submodules/` (an ATOM root) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: in ATOM context they are moved into the ATOM, in main app context they remain in the standard Rails locations.
 
 | Command | Title | Description |
 |---|---|---|
-| `thecore.addModel` | Thecore 3: Add a Model | Generates a Rails model with its migration and the standard Thecore concern structure (`Api`, `RailsAdmin`, `Endpoints`) inside the selected ATOM. |
-| `thecore.addMigration` | Thecore 3: Add a DB Migration | Creates a new database migration inside the selected ATOM. |
+| `thecore.addModel` | Thecore 3: Add a Model | Generates a Rails model with its migration and the standard Thecore concern structure (`Api`, `RailsAdmin`, `Endpoints`). |
+| `thecore.addMigration` | Thecore 3: Add a DB Migration | Creates a new database migration. |
 | `thecore.addRootAction` | Thecore 3: Add a Root Action | Generates a root-level action for the `rails_admin` backend UI (dashboard-style main menu section), including controller, view, assets, and i18n entries. |
 | `thecore.addMemberAction` | Thecore 3: Add a Member Action | Generates a member-level action for the `rails_admin` backend UI (per-row button in model list views), including controller, view, assets, and i18n entries. |
 
@@ -46,8 +45,8 @@ These commands appear when right-clicking on a folder **directly inside** `vendo
 
 1. Open the **Explorer** panel.
 2. Right-click on the relevant folder:
-   - On the **project root** or any folder outside `vendor/submodules/` to access main-app commands.
-   - On an **ATOM folder** inside `vendor/submodules/` to access ATOM-specific commands.
+   - On the **project root** or any folder outside `vendor/submodules/` to run commands against the main application.
+   - On an **ATOM folder** inside `vendor/submodules/` to run commands against that ATOM.
 3. Select the desired **Thecore 3** command.
 
 ### Command Palette
@@ -55,7 +54,7 @@ These commands appear when right-clicking on a folder **directly inside** `vendo
 1. Open the Command Palette with `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS).
 2. Type `Thecore` and select the desired command.
 
-> Note: commands that require a folder context (such as `Add a Model`) may prompt you to select a target folder when invoked from the Command Palette.
+> Note: when invoked from the Command Palette there is no clicked folder, so commands that work in both contexts (`Add a Model`, `Add a DB Migration`, `Add a Root Action`, `Add a Member Action`) run against the **main application**. To target an ATOM, use the explorer context menu on the ATOM folder.
 
 ## Model structure
 

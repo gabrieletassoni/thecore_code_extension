@@ -74,11 +74,13 @@ All commands are registered in `extension.js`. Each creates an `ExecutionContext
 | `thecore.createApp` | `createApp.js` | Outside `vendor/submodules/` |
 | `thecore.createATOM` | `createATOM.js` | Outside `vendor/submodules/` |
 | `thecore.addModel` | `addModel.js` | Both contexts |
-| `thecore.addRootAction` | `addRootAction.js` | Inside `vendor/submodules/` (ATOM root) |
-| `thecore.addMemberAction` | `addMemberAction.js` | Inside `vendor/submodules/` (ATOM root) |
-| `thecore.addMigration` | `addMigration.js` | Inside `vendor/submodules/` (ATOM root) |
+| `thecore.addRootAction` | `addRootAction.js` | Both contexts |
+| `thecore.addMemberAction` | `addMemberAction.js` | Both contexts |
+| `thecore.addMigration` | `addMigration.js` | Both contexts |
 
 Context is controlled in `package.json` via `contributes.menus["explorer/context"][].when` expressions.
+
+Dual-context commands (`addModel`, `addRootAction`, `addMemberAction`, `addMigration`) dispatch on `ctx.workspace.type()`: in ATOM context they validate the gemspec and place/move generated files into the ATOM; in app context they validate the workspace root with `railsAppValid()` and leave generated files in the main app (no move to a submodule). When invoked from the Command Palette (no folder argument), `workspaceContext.from(undefined)` falls back to an `AppContext` on the workspace root, so the main app is the default target.
 
 ---
 
@@ -119,9 +121,9 @@ if (!name) return;
 
 Factory and two adapter classes for the discriminated workspace type:
 
-- `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`
+- `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`; with no folder (Command Palette) it falls back to an `AppContext` on the workspace root, and returns `null` only when no workspace is open
 - **`ATOMContext`** — folder directly inside `vendor/submodules/`; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
-- **`AppContext`** — all other folders; exposes `modelDir()`, `migrationDir()`, `concernsDir(type)`, `appRoot()`
+- **`AppContext`** — all other folders; exposes the same path methods rooted at the workspace root: `modelDir()`, `migrationDir()`, `concernsDir(type)`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
 - Both expose `type()` (`'atom'` or `'app'`), `targetDir()`
 
 ### `libs/check.js`
