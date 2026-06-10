@@ -84,6 +84,17 @@ Do **not** use `proxyquire` for command tests. Do **not** stub `fs` or `vscode.w
 
 **Rule: When a test fails, fix the bug in the codebase — never modify the test to silence a failure. The only valid reason to change a test is if the test itself is provably wrong (e.g., it tests the wrong behaviour or has a logic error), and even then, document why in the commit message.**
 
+### checkPractices — Diagnostic Audit Command
+
+`checkPractices.js` is the only command that produces VS Code diagnostics rather than generating files. Key patterns that differ from other commands:
+
+- Creates a `vscode.languages.createDiagnosticCollection('thecore-practices')` and populates it with `vscode.Diagnostic` objects pointing at specific file paths and line numbers.
+- Builds a `violations` array using internal helper functions (`checkScaffoldFiles`, `checkActions`, `checkModels`) before emitting anything.
+- Some violations carry a `fix` object with an `apply(ctx)` method. After emitting diagnostics, the command offers a QuickPick to apply all fixable violations in one step.
+- Uses `hasUnreplacedTokens(content)` and `hasSkeletonMarker(content, marker)` from `libs/check.js` — two pure string predicates added for this command.
+- Uses `ctx.workspace.concernsDir(type)` — a path helper exposed by both `ATOMContext` and `AppContext`.
+- In ATOM context, also validates Scaffold Files (`after_initialize.rb`, `assets.rb`). In both contexts, audits every action `.rb` file and every model concern file.
+
 ### Adding a New Command
 
 1. Create `commands/<newCommand>.js` exporting `async function perform(ctx)`
@@ -101,6 +112,10 @@ Do **not** use `proxyquire` for command tests. Do **not** stub `fs` or `vscode.w
 3. Register in `extension.js` with `new ExecutionContext('Channel Name', folder)`
 4. Declare in `package.json` under `contributes.commands` and `contributes.menus`
 5. Add tests in `test/<newCommand>.test.js` using `makeCtx()`
+
+### VSIX Packaging — Dev Files Are Excluded
+
+`.vscodeignore` excludes all AI/dev files from the distributed VSIX (`.agents/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `PUBLISHING.md`, `docs/`, `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc`). This prevents `vsce`'s secret scanner from false-positiving on documentation that references PAT token names. Do not remove these entries from `.vscodeignore`.
 
 ### Releasing
 

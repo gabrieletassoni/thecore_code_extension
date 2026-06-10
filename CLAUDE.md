@@ -9,7 +9,7 @@ This file documents the codebase structure, conventions, and development workflo
 
 ## Project Overview
 
-A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, version `3.1.6`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Ruby on Rails applications and modular Rails engines called **ATOMs**. The extension generates boilerplate files, runs shell commands (e.g., `rails g model`), and enforces naming conventions.
+A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Ruby on Rails applications and modular Rails engines called **ATOMs**. The extension generates boilerplate files, runs shell commands (e.g., `rails g model`), enforces naming conventions, and audits ATOMs for Thecore practices conformance. The current version is in `package.json`.
 
 - **Entry point:** `extension.js`
 - **Bundled output:** `out/main.js` (via esbuild, never edit this directly)
@@ -28,6 +28,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, v
 │   ├── addMigration.js
 │   ├── addModel.js
 │   ├── addRootAction.js
+│   ├── checkPractices.js     # Audits ATOM/app for Thecore conventions; emits VS Code diagnostics
 │   ├── createATOM.js
 │   ├── createApp.js
 │   ├── releaseApp.js         # Currently unused / commented out
@@ -82,6 +83,7 @@ All commands are registered in `extension.js`. Each creates an `ExecutionContext
 | `thecore.addRootAction` | `addRootAction.js` | Both contexts |
 | `thecore.addMemberAction` | `addMemberAction.js` | Both contexts |
 | `thecore.addMigration` | `addMigration.js` | Both contexts |
+| `thecore.checkPractices` | `checkPractices.js` | Both contexts |
 
 Context is controlled in `package.json` via `contributes.menus["explorer/context"][].when` expressions.
 
@@ -127,8 +129,8 @@ if (!name) return;
 Factory and two adapter classes for the discriminated workspace type:
 
 - `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`; any folder at or below `vendor/submodules/<atom>/` resolves to that ATOM's root; with no folder (Command Palette) it falls back to an `AppContext` on the workspace root, and returns `null` only when no workspace is open
-- **`ATOMContext`** — folder inside an ATOM's tree; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
-- **`AppContext`** — all other folders; exposes the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()` which point to `config/member_actions`/`config/root_actions` instead of `lib/` (Zeitwerk autoload safety — see `docs/adr/0001-main-app-actions-live-in-config.md`)
+- **`ATOMContext`** — folder inside an ATOM's tree; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `concernsDir(type)`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
+- **`AppContext`** — all other folders; exposes the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()` which point to `config/member_actions`/`config/root_actions` instead of `lib/` (Zeitwerk autoload safety — see `docs/adr/0001-main-app-actions-live-in-config.md`). Also exposes `concernsDir(type)`.
 - Both expose `type()` (`'atom'` or `'app'`), `targetDir()`
 
 ### `libs/check.js`
@@ -143,6 +145,8 @@ Pure validation predicates — **no `outputChannel` parameter**. Return values o
 - `isPascalCase(word)` — returns `true/false` or a string error for non-string input
 - `hasGemspec(atomDir, atomName)` — returns gemspec path or `false`
 - `isDir(path)` / `isFile(path)` — type checks
+- `hasUnreplacedTokens(content)` — returns `true` if `content` still contains `{{...}}` template placeholders
+- `hasSkeletonMarker(content, marker)` — returns `true` if `content` includes the expected structural marker string
 
 ### `libs/configs.js`
 
@@ -328,6 +332,20 @@ Each command runs `npm version <level>` (updates `package.json`, commits, create
 | `eslint` | dev | Linting |
 | `prettier` | dev | Formatting |
 | `@vscode/vsce` | dev | Extension packaging/publishing |
+
+---
+
+## VSIX Packaging
+
+`.vscodeignore` controls what ends up in the distributed `.vsix`. The following are explicitly excluded because they are development/AI tooling with no value to extension users — and some (`.agents/`, `.claude/`, `PUBLISHING.md`, `CLAUDE.md`) can trigger `vsce`'s secret scanner:
+
+- `.agents/**`, `.claude/**` — AI skill files
+- `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `PUBLISHING.md` — dev/AI documentation
+- `docs/**` — internal ADRs
+- `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc` — dev tooling config
+- `test/**`, `tests/**`, `src/**`, `node_modules/**`, `.github/**` — source/test/CI artifacts
+
+What is intentionally included: `out/main.js`, `commands/`, `libs/`, `templates/`, `assets/`, `.devcontainer/`, `package.json`, `README.md`, `LICENSE.md`, `CHANGELOG.md`.
 
 ---
 

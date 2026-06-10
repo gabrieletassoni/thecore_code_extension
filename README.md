@@ -38,6 +38,7 @@ These commands appear when right-clicking on any folder. Right-clicking on an AT
 | `thecore.addMigration` | Thecore 3: Add a DB Migration | Creates a new database migration. |
 | `thecore.addRootAction` | Thecore 3: Add a Root Action | Generates a root-level action for the `rails_admin` backend UI (dashboard-style main menu section), including controller, view, assets, and i18n entries. |
 | `thecore.addMemberAction` | Thecore 3: Add a Member Action | Generates a member-level action for the `rails_admin` backend UI (per-row button in model list views), including controller, view, assets, and i18n entries. |
+| `thecore.checkPractices` | Thecore 3: Check Practices | Audits the target (ATOM or main app) for Thecore structural conventions. Reports missing scaffold files, incomplete action companions, and model concern violations as VS Code diagnostics. Offers to auto-fix resolvable issues. |
 
 ## Usage
 
