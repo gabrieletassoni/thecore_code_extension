@@ -236,6 +236,8 @@ Never use `console.log` for user output. Never pass `outputChannel` to `check.js
 
 **Rule: Always add or update tests when adding or modifying any function.**
 
+**Rule: When a test fails, fix the bug in the codebase — never modify the test to silence a failure. The only valid reason to change a test is if the test itself is provably wrong (e.g., it tests the wrong behaviour or has a logic error), and even then, document why in the commit message.**
+
 **Framework:** Mocha + Sinon (no proxyquire needed for command tests)
 
 **Run tests:**

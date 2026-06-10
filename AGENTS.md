@@ -82,6 +82,8 @@ Command tests are pure unit tests. They:
 
 Do **not** use `proxyquire` for command tests. Do **not** stub `fs` or `vscode.window.createOutputChannel` in command tests — that complexity belongs in `executionContext.test.js`.
 
+**Rule: When a test fails, fix the bug in the codebase — never modify the test to silence a failure. The only valid reason to change a test is if the test itself is provably wrong (e.g., it tests the wrong behaviour or has a logic error), and even then, document why in the commit message.**
+
 ### Adding a New Command
 
 1. Create `commands/<newCommand>.js` exporting `async function perform(ctx)`
