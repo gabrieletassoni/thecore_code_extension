@@ -2,6 +2,11 @@
 
 This file documents the codebase structure, conventions, and development workflows for AI assistants working on this project.
 
+> **⚠️ MANDATORY — read [AGENTS.md](AGENTS.md) before writing any code.**
+> When implementing a new feature or changing the codebase, AGENTS.md requires running the
+> `/grill-with-docs` → `/to-prd` → `/to-issues` → `/tdd` skill sequence **before** any code is written.
+> This file (CLAUDE.md) covers structure and conventions only; the mandatory workflow lives in AGENTS.md.
+
 ## Project Overview
 
 A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`, version `3.1.6`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Ruby on Rails applications and modular Rails engines called **ATOMs**. The extension generates boilerplate files, runs shell commands (e.g., `rails g model`), and enforces naming conventions.
@@ -80,7 +85,7 @@ All commands are registered in `extension.js`. Each creates an `ExecutionContext
 
 Context is controlled in `package.json` via `contributes.menus["explorer/context"][].when` expressions.
 
-Dual-context commands (`addModel`, `addRootAction`, `addMemberAction`, `addMigration`) dispatch on `ctx.workspace.type()`: in ATOM context they validate the gemspec and place/move generated files into the ATOM; in app context they validate the workspace root with `railsAppValid()` and leave generated files in the main app (no move to a submodule). When invoked from the Command Palette (no folder argument), `workspaceContext.from(undefined)` falls back to an `AppContext` on the workspace root, so the main app is the default target.
+Dual-context commands (`addModel`, `addRootAction`, `addMemberAction`, `addMigration`) dispatch on `ctx.workspace.type()`: in ATOM context they validate the gemspec and place/move generated files into the ATOM; in app context they validate the workspace root with `railsAppValid()` and leave generated files in the main app (no move to a submodule). Right-clicking *any* folder inside an ATOM's tree resolves to the owning ATOM. When invoked from the Command Palette (no folder argument), `workspaceContext.from(undefined)` falls back to an `AppContext` on the workspace root, so the main app is the default target. Main-app actions are generated into `config/root_actions` / `config/member_actions`, never `lib/` (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
 ---
 
@@ -121,9 +126,9 @@ if (!name) return;
 
 Factory and two adapter classes for the discriminated workspace type:
 
-- `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`; with no folder (Command Palette) it falls back to an `AppContext` on the workspace root, and returns `null` only when no workspace is open
-- **`ATOMContext`** — folder directly inside `vendor/submodules/`; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
-- **`AppContext`** — all other folders; exposes the same path methods rooted at the workspace root: `modelDir()`, `migrationDir()`, `concernsDir(type)`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
+- `from(folder)` — returns `ATOMContext`, `AppContext`, or `null`; any folder at or below `vendor/submodules/<atom>/` resolves to that ATOM's root; with no folder (Command Palette) it falls back to an `AppContext` on the workspace root, and returns `null` only when no workspace is open
+- **`ATOMContext`** — folder inside an ATOM's tree; exposes `atomDir`, `atomName`, `migrationDir()`, `modelDir()`, `memberActionsDir()`, `rootActionsDir()`, `localesDir()`, `viewsDir()`, `jsAssetsDir()`, `cssAssetsDir()`, `initializerFile(name)`, `assetsFile()`, `appRoot()`
+- **`AppContext`** — all other folders; exposes the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()` which point to `config/member_actions`/`config/root_actions` instead of `lib/` (Zeitwerk autoload safety — see `docs/adr/0001-main-app-actions-live-in-config.md`)
 - Both expose `type()` (`'atom'` or `'app'`), `targetDir()`
 
 ### `libs/check.js`

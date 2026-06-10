@@ -30,7 +30,7 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 
 ### Main application and ATOM context
 
-These commands appear when right-clicking on any folder. Right-clicking on a folder **directly inside** `vendor/submodules/` (an ATOM root) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: in ATOM context they are moved into the ATOM, in main app context they remain in the standard Rails locations.
+These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: in ATOM context they are moved into the ATOM, in main app context they remain in the standard Rails locations — except actions, which are generated into `config/root_actions` / `config/member_actions` so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
 | Command | Title | Description |
 |---|---|---|
@@ -46,7 +46,7 @@ These commands appear when right-clicking on any folder. Right-clicking on a fol
 1. Open the **Explorer** panel.
 2. Right-click on the relevant folder:
    - On the **project root** or any folder outside `vendor/submodules/` to run commands against the main application.
-   - On an **ATOM folder** inside `vendor/submodules/` to run commands against that ATOM.
+   - On an **ATOM folder** inside `vendor/submodules/` (or any folder within it) to run commands against that ATOM.
 3. Select the desired **Thecore 3** command.
 
 ### Command Palette

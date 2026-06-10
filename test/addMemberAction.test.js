@@ -210,8 +210,8 @@ describe('commands/addMemberAction', () => {
 
             const afterInitWrite = writeStub.args.find(a => String(a[0]).includes('after_initialize'));
             assert.ok(afterInitWrite, 'after_initialize.rb should be updated');
-            assert.ok(afterInitWrite[1].includes("require Rails.root.join('lib', 'member_actions', 'my_test_action').to_s"),
-                'main app require must use Rails.root.join');
+            assert.ok(afterInitWrite[1].includes("require Rails.root.join('config', 'member_actions', 'my_test_action').to_s"),
+                'main app require must use Rails.root.join on config/');
         });
 
         it('creates the after_initialize.rb initializer when it is missing', async () => {

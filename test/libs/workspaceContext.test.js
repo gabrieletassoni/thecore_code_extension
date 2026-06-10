@@ -31,6 +31,19 @@ describe('libs/workspaceContext', () => {
             assert.ok(ctx instanceof ATOMContext);
         });
 
+        it('resolves folders deep inside an ATOM to the owning ATOM', () => {
+            const ctx = from({ fsPath: `${ATOM_DIR}/app/models` });
+            assert.ok(ctx instanceof ATOMContext);
+            assert.strictEqual(ctx.atomDir, ATOM_DIR);
+            assert.strictEqual(ctx.atomName, 'my_atom');
+        });
+
+        it('resolves an ATOM lib subfolder to the owning ATOM, not the main app', () => {
+            const ctx = from({ fsPath: `${ATOM_DIR}/lib/root_actions` });
+            assert.ok(ctx instanceof ATOMContext);
+            assert.strictEqual(ctx.atomDir, ATOM_DIR);
+        });
+
         it('returns AppContext when folder is outside vendor/submodules', () => {
             const ctx = from({ fsPath: APP_DIR });
             assert.ok(ctx instanceof AppContext);
@@ -97,11 +110,11 @@ describe('libs/workspaceContext', () => {
         it('concernsDir(type) is inside root/app/models/concerns', () => {
             assert.strictEqual(ctx.concernsDir('rails_admin'), path.join(APP_DIR, 'app', 'models', 'concerns', 'rails_admin'));
         });
-        it('memberActionsDir() is inside root/lib', () => {
-            assert.strictEqual(ctx.memberActionsDir(), path.join(APP_DIR, 'lib', 'member_actions'));
+        it('memberActionsDir() is inside root/config (never autoloaded — see ADR 0001)', () => {
+            assert.strictEqual(ctx.memberActionsDir(), path.join(APP_DIR, 'config', 'member_actions'));
         });
-        it('rootActionsDir() is inside root/lib', () => {
-            assert.strictEqual(ctx.rootActionsDir(), path.join(APP_DIR, 'lib', 'root_actions'));
+        it('rootActionsDir() is inside root/config (never autoloaded — see ADR 0001)', () => {
+            assert.strictEqual(ctx.rootActionsDir(), path.join(APP_DIR, 'config', 'root_actions'));
         });
         it('localesDir() is inside root/config', () => {
             assert.strictEqual(ctx.localesDir(), path.join(APP_DIR, 'config', 'locales'));

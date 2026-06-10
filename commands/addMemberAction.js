@@ -67,10 +67,11 @@ async function perform(ctx) {
             ctx.write.textFile(path.dirname(afterInitializeFile), 'after_initialize.rb',
                 renderTemplate('createATOM/after_initialize.rb'));
         }
-        // The main app's lib folder is not on the load path, so require by full path there.
+        // Main app actions live under config/ and are not on the load path,
+        // so require by full path there (see docs/adr/0001).
         const requireLine = isAtom
             ? `require 'member_actions/${memberActionName}'`
-            : `require Rails.root.join('lib', 'member_actions', '${memberActionName}').to_s`;
+            : `require Rails.root.join('config', 'member_actions', '${memberActionName}').to_s`;
         const afterInitializeContent = fs.readFileSync(afterInitializeFile).toString();
         if (!afterInitializeContent.includes(requireLine)) {
             const lines = afterInitializeContent.split('\n');

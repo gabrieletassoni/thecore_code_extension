@@ -37,8 +37,11 @@ class AppContext {
     modelDir() { return path.join(this.root, 'app', 'models'); }
     migrationDir() { return path.join(this.root, 'db', 'migrate'); }
     concernsDir(type) { return path.join(this.root, 'app', 'models', 'concerns', type); }
-    memberActionsDir() { return path.join(this.root, 'lib', 'member_actions'); }
-    rootActionsDir() { return path.join(this.root, 'lib', 'root_actions'); }
+    // Main app actions live under config/, not lib/: Rails 7.1+ autoload_lib would
+    // eager-load lib/ via Zeitwerk and crash on constant-less action files
+    // (see docs/adr/0001-main-app-actions-live-in-config.md).
+    memberActionsDir() { return path.join(this.root, 'config', 'member_actions'); }
+    rootActionsDir() { return path.join(this.root, 'config', 'root_actions'); }
     localesDir() { return path.join(this.root, 'config', 'locales'); }
     viewsDir() { return path.join(this.root, 'app', 'views', 'rails_admin', 'main'); }
     jsAssetsDir() { return path.join(this.root, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'); }
@@ -52,6 +55,17 @@ function workspaceRootPath() {
     return folders && folders.length ? folders[0].uri.fsPath : null;
 }
 
+function atomRootOf(dirPath) {
+    let current = dirPath;
+    let parent = path.dirname(current);
+    while (parent !== current) {
+        if (/[/\\]vendor[/\\]submodules$/.test(parent)) return current;
+        current = parent;
+        parent = path.dirname(current);
+    }
+    return null;
+}
+
 function from(folder) {
     const dirPath = folder ? (folder.fsPath !== undefined ? folder.fsPath : folder) : null;
     const workspaceRoot = workspaceRootPath() || dirPath;
@@ -59,10 +73,9 @@ function from(folder) {
     if (!workspaceRoot) return null;
 
     if (dirPath) {
-        const parentPath = path.dirname(dirPath);
-        if (/[/\\]vendor[/\\]submodules$/.test(parentPath)) {
-            return new ATOMContext(dirPath, workspaceRoot);
-        }
+        // Any folder inside an ATOM's tree targets that ATOM, not the main app.
+        const atomRoot = atomRootOf(dirPath);
+        if (atomRoot) return new ATOMContext(atomRoot, workspaceRoot);
     }
     // Folders outside vendor/submodules and command palette invocations
     // (no folder argument) both target the main app.
