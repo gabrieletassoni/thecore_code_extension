@@ -54,6 +54,10 @@
         {
           "command": "thecore.addMigration",
           "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
+        },
+        {
+          "command": "thecore.checkPractices",
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder"
         }
       ]
     },
@@ -85,6 +89,10 @@
       {
         "command": "thecore.addModel",
         "title": "Thecore 3: Add a Model"
+      },
+      {
+        "command": "thecore.checkPractices",
+        "title": "Thecore 3: Check Practices"
       }
     ]
   },

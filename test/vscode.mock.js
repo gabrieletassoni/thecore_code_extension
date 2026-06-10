@@ -14,6 +14,28 @@ function makeOutputChannel() {
     };
 }
 
+class Position {
+    constructor(line, character) {
+        this.line = line;
+        this.character = character;
+    }
+}
+
+class Range {
+    constructor(start, end) {
+        this.start = start;
+        this.end = end;
+    }
+}
+
+class Diagnostic {
+    constructor(range, message, severity) {
+        this.range = range;
+        this.message = message;
+        this.severity = severity;
+    }
+}
+
 const mockVscode = {
     workspace: {
         workspaceFolders: [
@@ -33,6 +55,29 @@ const mockVscode = {
     commands: {
         registerCommand: (_id, _handler) => ({ dispose: () => {} }),
     },
+
+    languages: {
+        createDiagnosticCollection: (_name) => ({
+            set: () => {},
+            clear: () => {},
+            delete: () => {},
+            dispose: () => {},
+        }),
+    },
+
+    Uri: {
+        file: (p) => ({ fsPath: p }),
+    },
+
+    DiagnosticSeverity: {
+        Error: 0,
+        Warning: 1,
+        Information: 2,
+    },
+
+    Position,
+    Range,
+    Diagnostic,
 };
 
 module.exports = mockVscode;

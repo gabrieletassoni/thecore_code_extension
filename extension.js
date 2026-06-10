@@ -43,6 +43,11 @@ function activate(context) {
         const ctx = new ExecutionContext('Thecore: Add Model', folder);
         require('./commands/addModel').perform(ctx);
     }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('thecore.checkPractices', async (folder) => {
+        const ctx = new ExecutionContext('Thecore: Check Practices', folder);
+        require('./commands/checkPractices').perform(ctx);
+    }));
 }
 
 function deactivate() { }

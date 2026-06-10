@@ -58,6 +58,10 @@ const isFile = (filePath) => {
     return fs.existsSync(filePath) && fs.lstatSync(filePath).isFile();
 };
 
+const hasUnreplacedTokens = (content) => /\{\{[^}]+\}\}/.test(content);
+
+const hasSkeletonMarker = (content, marker) => content.includes(marker);
+
 module.exports = {
     workspaceExixtence,
     rubyOnRailsAppValidity,
@@ -68,4 +72,6 @@ module.exports = {
     hasGemspec,
     isDir,
     isFile,
+    hasUnreplacedTokens,
+    hasSkeletonMarker,
 };
