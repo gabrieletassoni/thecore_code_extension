@@ -15,7 +15,14 @@ describe('libs/workspaceContext', () => {
     });
 
     describe('from()', () => {
-        it('returns null when folder is undefined', () => {
+        it('returns AppContext rooted at the workspace when folder is undefined (command palette)', () => {
+            const ctx = from(undefined);
+            assert.ok(ctx instanceof AppContext);
+            assert.strictEqual(ctx.appRoot(), APP_DIR);
+        });
+
+        it('returns null when folder is undefined and no workspace is open', () => {
+            vscode.workspace.workspaceFolders = undefined;
             assert.strictEqual(from(undefined), null);
         });
 
@@ -89,6 +96,30 @@ describe('libs/workspaceContext', () => {
         it('migrationDir() is inside root', () => assert.strictEqual(ctx.migrationDir(), path.join(APP_DIR, 'db', 'migrate')));
         it('concernsDir(type) is inside root/app/models/concerns', () => {
             assert.strictEqual(ctx.concernsDir('rails_admin'), path.join(APP_DIR, 'app', 'models', 'concerns', 'rails_admin'));
+        });
+        it('memberActionsDir() is inside root/lib', () => {
+            assert.strictEqual(ctx.memberActionsDir(), path.join(APP_DIR, 'lib', 'member_actions'));
+        });
+        it('rootActionsDir() is inside root/lib', () => {
+            assert.strictEqual(ctx.rootActionsDir(), path.join(APP_DIR, 'lib', 'root_actions'));
+        });
+        it('localesDir() is inside root/config', () => {
+            assert.strictEqual(ctx.localesDir(), path.join(APP_DIR, 'config', 'locales'));
+        });
+        it('viewsDir() is inside root', () => {
+            assert.strictEqual(ctx.viewsDir(), path.join(APP_DIR, 'app', 'views', 'rails_admin', 'main'));
+        });
+        it('jsAssetsDir() is inside root', () => {
+            assert.strictEqual(ctx.jsAssetsDir(), path.join(APP_DIR, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'));
+        });
+        it('cssAssetsDir() is inside root', () => {
+            assert.strictEqual(ctx.cssAssetsDir(), path.join(APP_DIR, 'app', 'assets', 'stylesheets', 'rails_admin', 'actions'));
+        });
+        it('initializerFile(name) is inside root/config/initializers', () => {
+            assert.strictEqual(ctx.initializerFile('after_initialize.rb'), path.join(APP_DIR, 'config', 'initializers', 'after_initialize.rb'));
+        });
+        it('assetsFile() is the assets initializer', () => {
+            assert.strictEqual(ctx.assetsFile(), path.join(APP_DIR, 'config', 'initializers', 'assets.rb'));
         });
     });
 });

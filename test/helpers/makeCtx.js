@@ -36,6 +36,14 @@ function makeAppWorkspace(overrides = {}) {
         modelDir: () => `${FAKE_ROOT}/app/models`,
         migrationDir: () => `${FAKE_ROOT}/db/migrate`,
         concernsDir: (t) => `${FAKE_ROOT}/app/models/concerns/${t}`,
+        memberActionsDir: () => `${FAKE_ROOT}/lib/member_actions`,
+        rootActionsDir: () => `${FAKE_ROOT}/lib/root_actions`,
+        localesDir: () => `${FAKE_ROOT}/config/locales`,
+        viewsDir: () => `${FAKE_ROOT}/app/views/rails_admin/main`,
+        jsAssetsDir: () => `${FAKE_ROOT}/app/assets/javascripts/rails_admin/actions`,
+        cssAssetsDir: () => `${FAKE_ROOT}/app/assets/stylesheets/rails_admin/actions`,
+        initializerFile: (name) => `${FAKE_ROOT}/config/initializers/${name}`,
+        assetsFile: () => `${FAKE_ROOT}/config/initializers/assets.rb`,
         ...overrides
     };
 }

@@ -37,23 +37,35 @@ class AppContext {
     modelDir() { return path.join(this.root, 'app', 'models'); }
     migrationDir() { return path.join(this.root, 'db', 'migrate'); }
     concernsDir(type) { return path.join(this.root, 'app', 'models', 'concerns', type); }
+    memberActionsDir() { return path.join(this.root, 'lib', 'member_actions'); }
+    rootActionsDir() { return path.join(this.root, 'lib', 'root_actions'); }
+    localesDir() { return path.join(this.root, 'config', 'locales'); }
+    viewsDir() { return path.join(this.root, 'app', 'views', 'rails_admin', 'main'); }
+    jsAssetsDir() { return path.join(this.root, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'); }
+    cssAssetsDir() { return path.join(this.root, 'app', 'assets', 'stylesheets', 'rails_admin', 'actions'); }
+    initializerFile(name) { return path.join(this.root, 'config', 'initializers', name); }
+    assetsFile() { return path.join(this.root, 'config', 'initializers', 'assets.rb'); }
 }
 
 function workspaceRootPath() {
     const folders = vscode.workspace.workspaceFolders;
-    return folders ? folders[0].uri.fsPath : null;
+    return folders && folders.length ? folders[0].uri.fsPath : null;
 }
 
 function from(folder) {
-    if (!folder) return null;
-    const dirPath = folder.fsPath !== undefined ? folder.fsPath : folder;
+    const dirPath = folder ? (folder.fsPath !== undefined ? folder.fsPath : folder) : null;
     const workspaceRoot = workspaceRootPath() || dirPath;
-    const parentPath = path.dirname(dirPath);
-    const isAtomParent = /[/\\]vendor[/\\]submodules$/.test(parentPath);
+    // No clicked folder and no open workspace: nothing to operate on.
+    if (!workspaceRoot) return null;
 
-    if (isAtomParent) {
-        return new ATOMContext(dirPath, workspaceRoot);
+    if (dirPath) {
+        const parentPath = path.dirname(dirPath);
+        if (/[/\\]vendor[/\\]submodules$/.test(parentPath)) {
+            return new ATOMContext(dirPath, workspaceRoot);
+        }
     }
+    // Folders outside vendor/submodules and command palette invocations
+    // (no folder argument) both target the main app.
     return new AppContext(workspaceRoot);
 }
 

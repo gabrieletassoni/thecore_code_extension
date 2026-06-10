@@ -5,7 +5,7 @@ const sinon = require('sinon');
 const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addRootAction');
-const { makeCtx, makeAtomWorkspace } = require('./helpers/makeCtx');
+const { makeCtx, makeAtomWorkspace, makeAppWorkspace } = require('./helpers/makeCtx');
 
 describe('commands/addRootAction', () => {
     afterEach(() => sinon.restore());
@@ -172,5 +172,68 @@ describe('commands/addRootAction', () => {
 
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('disk full'));
+    });
+
+    describe('main app context', () => {
+        it('returns early when the workspace root is not a valid Rails app', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.check.railsAppValid.returns({ ok: false, message: 'Not a Rails app' });
+            const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(errorStub.calledOnce, 'error should be shown when the app is not a Rails app');
+            assert.ok(!infoStub.called);
+        });
+
+        it('creates the root action in the main app without requiring a gemspec', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            sinon.stub(vscode.window, 'showInputBox').resolves('my_root_action');
+            sinon.stub(fs, 'existsSync').returns(false);
+            sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
+            sinon.stub(fs, 'writeFileSync');
+            sinon.stub(fs, 'appendFileSync');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(ctx.check.railsAppValid.called, 'the Rails app guard should run');
+            assert.ok(!ctx.check.hasGemspec.called, 'gemspec check must not run for the main app');
+            assert.ok(ctx.mkdir.calledWith(ctx.workspace.rootActionsDir()), 'lib/root_actions should be created');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+        });
+
+        it('requires the action by full path in the main app after_initialize.rb', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            sinon.stub(vscode.window, 'showInputBox').resolves('my_root_action');
+            sinon.stub(fs, 'existsSync').returns(false);
+            sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
+            const writeStub = sinon.stub(fs, 'writeFileSync');
+            sinon.stub(fs, 'appendFileSync');
+            sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            const afterInitWrite = writeStub.args.find(a => String(a[0]).includes('after_initialize'));
+            assert.ok(afterInitWrite, 'after_initialize.rb should be updated');
+            assert.ok(afterInitWrite[1].includes("require Rails.root.join('lib', 'root_actions', 'my_root_action').to_s"),
+                'main app require must use Rails.root.join');
+        });
+
+        it('creates the after_initialize.rb initializer when it is missing', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            sinon.stub(vscode.window, 'showInputBox').resolves('my_root_action');
+            sinon.stub(fs, 'existsSync').returns(false);
+            sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
+            sinon.stub(fs, 'writeFileSync');
+            sinon.stub(fs, 'appendFileSync');
+            sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            const initWrite = ctx.write.textFile.args.find(a => a[1] === 'after_initialize.rb');
+            assert.ok(initWrite, 'after_initialize.rb should be created from the template when missing');
+        });
     });
 });

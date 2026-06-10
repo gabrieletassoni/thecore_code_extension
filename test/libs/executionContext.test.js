@@ -154,9 +154,10 @@ describe('libs/executionContext — CheckContext', () => {
     });
 
     describe('workspace', () => {
-        it('is null when no folder provided', () => {
+        it('is AppContext rooted at the workspace when no folder provided (command palette)', () => {
             const ctx = new execCtxModule.ExecutionContext('Test', undefined);
-            assert.strictEqual(ctx.workspace, null);
+            assert.strictEqual(ctx.workspace.type(), 'app');
+            assert.strictEqual(ctx.workspace.appRoot(), APP_DIR);
         });
 
         it('is ATOMContext when folder is inside vendor/submodules', () => {

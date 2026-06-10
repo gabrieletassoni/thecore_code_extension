@@ -5,7 +5,7 @@ const sinon = require('sinon');
 const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addMigration');
-const { makeCtx, makeAtomWorkspace } = require('./helpers/makeCtx');
+const { makeCtx, makeAtomWorkspace, makeAppWorkspace } = require('./helpers/makeCtx');
 
 describe('commands/addMigration', () => {
     afterEach(() => sinon.restore());
@@ -158,5 +158,39 @@ describe('commands/addMigration', () => {
         assert.ok(renameSyncStub.calledOnce, 'migration file should be moved');
         assert.ok(infoStub.calledOnce, 'success message should be shown');
         assert.ok(infoStub.firstCall.args[0].includes('AddNameToUsers'));
+    });
+
+    describe('main app context', () => {
+        it('returns early when the workspace root is not a valid Rails app', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.check.railsAppValid.returns({ ok: false, message: 'Not a Rails app' });
+            const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(errorStub.calledOnce, 'error should be shown when the app is not a Rails app');
+            assert.ok(!infoStub.called);
+            assert.ok(!ctx.exec.called, 'rails g should not run when the guard fails');
+        });
+
+        it('leaves the migration in db/migrate without moving it', async () => {
+            const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.exec.resolves(migrationOutput);
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('AddNameToUsers')
+                .onSecondCall().resolves('name:string');
+            const renameSyncStub = sinon.stub(fs, 'renameSync');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(ctx.check.railsAppValid.called, 'the Rails app guard should run');
+            assert.ok(!ctx.check.hasGemspec.called, 'gemspec check must not run for the main app');
+            assert.ok(!renameSyncStub.called, 'migration must stay in the main app db/migrate');
+            assert.ok(!ctx.mkdir.called, 'no ATOM migration folder should be created');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+        });
     });
 });
