@@ -57,7 +57,7 @@ async function perform() {
         outputChannel.appendLine(`Releasing version ${version} of the app.`);
         // Ask The the user if he wants to increment the Major, Minor or Patch version
         vscode.window.showQuickPick(['Major', 'Minor', 'Patch']).then((versionIncrement) => {
-            // Increment the version in the version variable accordingly to the selected Pick
+            if (!versionIncrement) return;
             if (versionIncrement === 'Major') {
                 version = version.split('.');
                 version[0] = parseInt(version[0]) + 1;
@@ -74,19 +74,14 @@ async function perform() {
                 version[2] = parseInt(version[2]) + 1;
                 version = version.join('.');
             }
-            // Write the new version to the VERSION file
             fs.writeFileSync(versionFile, version);
-            // Commit the changes
-            // Ask the user for the commit message for the release
             vscode.window.showInputBox({
                 placeHolder: 'Enter the commit message for the release',
                 value: 'Release'
             }).then(async (commitMessage) => {
-                // Commit the changes
+                if (!commitMessage) return;
                 if (!await execShell(`git commit -a -m "${commitMessage}"`, custombuildsDir, outputChannel)) { return; }
-                // Tag the commit with the version
                 if (!await execShell(`git tag -a ${version} -m "${commitMessage}"`, custombuildsDir, outputChannel)) { return; }
-                // Push the commit and the tag to the remote repository
                 if (!await execShell(`git push && git push --tags`, custombuildsDir, outputChannel)) { return; }
             });
         });

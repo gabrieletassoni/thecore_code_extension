@@ -173,25 +173,37 @@ describe('commands/releaseApp', () => {
 
     // ── Cancellation flows ───────────────────────────────────────────────────
 
-    it('does not increment the version when showQuickPick returns undefined (no branch matches)', async () => {
-        // NOTE: releaseApp.js writes the VERSION file unconditionally after the if/else block,
-        // so the file is still written even when the user "cancels" — with the unchanged version.
-        // This test documents that actual behaviour.
+    it('does not write the VERSION file or commit when the user cancels the version pick', async () => {
         sinon.stub(fs, 'readdirSync').returns(['Dockerfile']);
         sinon.stub(fs, 'existsSync').returns(false);
         sinon.stub(fs, 'readFileSync').returns('1.0.0');
         const writeStub = sinon.stub(fs, 'writeFileSync');
         sinon.stub(vscode.window, 'showQuickPick').resolves(undefined);
-        sinon.stub(vscode.window, 'showInputBox').resolves('no-op commit');
+        sinon.stub(vscode.window, 'showInputBox');
         execShellStub.resolves(SHELL_OK);
 
         await perform();
         await flushPromises();
 
-        // Version written but value unchanged (no branch matched)
-        const versionWrite = writeStub.args.find(a => a[0] && a[0].includes('VERSION'));
-        assert.ok(versionWrite, 'VERSION file is still written (code has no early-return for undefined pick)');
-        assert.strictEqual(versionWrite[1], '1.0.0', 'version should remain unchanged when no pick was made');
+        assert.ok(!writeStub.called, 'VERSION file should not be written when version pick is cancelled');
+        const gitCommitCalls = execShellStub.args.filter(a => a[0].includes('git commit'));
+        assert.strictEqual(gitCommitCalls.length, 0, 'git commit should not run when version pick is cancelled');
+    });
+
+    it('does not commit when the user cancels the commit message input', async () => {
+        sinon.stub(fs, 'readdirSync').returns(['Dockerfile']);
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns('1.0.0');
+        sinon.stub(fs, 'writeFileSync');
+        sinon.stub(vscode.window, 'showQuickPick').resolves('Patch');
+        sinon.stub(vscode.window, 'showInputBox').resolves(undefined); // cancel commit message
+        execShellStub.resolves(SHELL_OK);
+
+        await perform();
+        await flushPromises();
+
+        const gitCommitCalls = execShellStub.args.filter(a => a[0].includes('git commit'));
+        assert.strictEqual(gitCommitCalls.length, 0, 'git commit should not run when commit message is cancelled');
     });
 
     // ── pre-compile.sh branching ─────────────────────────────────────────────
