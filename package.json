@@ -3,7 +3,7 @@
   "displayName": "Thecore",
   "description": "A Ruby on Rails Framework aimed at fast model driven API and Backend.",
   "publisher": "gabrieletassoni",
-  "version": "3.1.8",
+  "version": "3.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/gabrieletassoni/thecore_code_extension"
@@ -29,15 +29,15 @@
       "explorer/context": [
         {
           "command": "thecore.setupDevcontainer",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\/]vendor[\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.createApp",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\/]vendor[\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.createATOM",
-          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\\/]vendor[\\\\\\/]submodules$/)"
+          "when": "explorerViewletVisible && explorerViewletFocus && explorerResourceIsFolder && !(resourceDirname =~ /.*?[\\\\\/]vendor[\\\\\/]submodules$/)"
         },
         {
           "command": "thecore.addModel",
