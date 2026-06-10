@@ -29,6 +29,7 @@ describe('Extension', () => {
             'thecore.addMemberAction',
             'thecore.addMigration',
             'thecore.addModel',
+            'thecore.checkPractices',
         ];
 
         it('registers all expected commands', () => {

@@ -16,6 +16,8 @@ const {
     hasGemspec,
     isDir,
     isFile,
+    hasUnreplacedTokens,
+    hasSkeletonMarker,
 } = require('../../libs/check');
 
 const ATOM_DIR = path.resolve(__dirname, '../samples/atom');
@@ -169,6 +171,46 @@ describe('libs/check', () => {
         it('returns false when the path points to a file', () => {
             const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
             assert.strictEqual(isDir(gemspecPath), false);
+        });
+    });
+
+    // ── hasUnreplacedTokens ───────────────────────────────────────────────────
+
+    describe('hasUnreplacedTokens', () => {
+        it('returns true when content contains a {{key}} token', () => {
+            assert.strictEqual(hasUnreplacedTokens('Hello {{name}}!'), true);
+        });
+
+        it('returns true when multiple tokens are present', () => {
+            assert.strictEqual(hasUnreplacedTokens('{{foo}} and {{bar}}'), true);
+        });
+
+        it('returns false when content has no tokens', () => {
+            assert.strictEqual(hasUnreplacedTokens('No tokens here'), false);
+        });
+
+        it('returns false for an empty string', () => {
+            assert.strictEqual(hasUnreplacedTokens(''), false);
+        });
+    });
+
+    // ── hasSkeletonMarker ─────────────────────────────────────────────────────
+
+    describe('hasSkeletonMarker', () => {
+        it('returns true when the marker is present in content', () => {
+            assert.strictEqual(hasSkeletonMarker('RailsAdmin::Config::Actions.add_action "foo"', 'RailsAdmin::Config::Actions.add_action'), true);
+        });
+
+        it('returns false when the marker is absent', () => {
+            assert.strictEqual(hasSkeletonMarker('some other content', 'RailsAdmin::Config::Actions.add_action'), false);
+        });
+
+        it('returns false for an empty content string', () => {
+            assert.strictEqual(hasSkeletonMarker('', 'http_methods'), false);
+        });
+
+        it('returns true for a multi-word marker found mid-content', () => {
+            assert.strictEqual(hasSkeletonMarker('line1\nhttp_methods [:get]\nline3', 'http_methods'), true);
         });
     });
 
