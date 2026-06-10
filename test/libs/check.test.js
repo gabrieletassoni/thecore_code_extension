@@ -20,10 +20,6 @@ const {
 
 const ATOM_DIR = path.resolve(__dirname, '../samples/atom');
 
-function oc() {
-    return { appendLine: () => {}, append: () => {} };
-}
-
 describe('libs/check', () => {
     afterEach(() => sinon.restore());
 
@@ -32,12 +28,12 @@ describe('libs/check', () => {
     describe('workspaceExixtence', () => {
         it('returns true when workspace folders are defined', () => {
             vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws' } }];
-            assert.strictEqual(workspaceExixtence(oc()), true);
+            assert.strictEqual(workspaceExixtence(), true);
         });
 
         it('returns false when workspace folders are undefined', () => {
             vscode.workspace.workspaceFolders = undefined;
-            assert.strictEqual(workspaceExixtence(oc()), false);
+            assert.strictEqual(workspaceExixtence(), false);
             vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws' } }];
         });
     });
@@ -51,7 +47,7 @@ describe('libs/check', () => {
 
         it('returns true with exactly one workspace folder', () => {
             vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws' } }];
-            assert.strictEqual(workspaceEmptiness(oc()), true);
+            assert.strictEqual(workspaceEmptiness(), true);
         });
 
         it('returns false with more than one workspace folder', () => {
@@ -59,7 +55,7 @@ describe('libs/check', () => {
                 { uri: { fsPath: '/ws1' } },
                 { uri: { fsPath: '/ws2' } },
             ];
-            assert.strictEqual(workspaceEmptiness(oc()), false);
+            assert.strictEqual(workspaceEmptiness(), false);
         });
     });
 
@@ -72,7 +68,7 @@ describe('libs/check', () => {
 
         it('returns a dirs object when all required directories exist', () => {
             sinon.stub(fs, 'existsSync').returns(true);
-            const result = rubyOnRailsAppValidity(false, oc());
+            const result = rubyOnRailsAppValidity(false);
             assert.ok(result, 'expected a truthy dirs object');
             assert.strictEqual(result.workspaceRoot, '/ws');
             assert.ok(result.appDir);
@@ -81,17 +77,13 @@ describe('libs/check', () => {
 
         it('returns false when any required directory is missing', () => {
             sinon.stub(fs, 'existsSync').returns(false);
-            assert.strictEqual(rubyOnRailsAppValidity(false, oc()), false);
+            assert.strictEqual(rubyOnRailsAppValidity(false), false);
         });
 
         it('returns false silently when hideErrorMessage is true', () => {
             sinon.stub(fs, 'existsSync').returns(false);
-            const outputLines = [];
-            const output = { appendLine: (l) => outputLines.push(l) };
-            const result = rubyOnRailsAppValidity(true, output);
+            const result = rubyOnRailsAppValidity(true);
             assert.strictEqual(result, false);
-            // hideErrorMessage=true: the negative message should NOT be appended
-            assert.ok(!outputLines.some(l => l.includes('not a Ruby on Rails')));
         });
     });
 
@@ -100,12 +92,12 @@ describe('libs/check', () => {
     describe('fileExistence', () => {
         it('returns true when the path exists', () => {
             sinon.stub(fs, 'existsSync').returns(true);
-            assert.strictEqual(fileExistence('/some/file', oc()), true);
+            assert.strictEqual(fileExistence('/some/file'), true);
         });
 
         it('returns false when the path does not exist', () => {
             sinon.stub(fs, 'existsSync').returns(false);
-            assert.strictEqual(fileExistence('/missing', oc()), false);
+            assert.strictEqual(fileExistence('/missing'), false);
         });
     });
 
@@ -113,12 +105,12 @@ describe('libs/check', () => {
 
     describe('commandExistence', () => {
         it('returns true for a command that is available (node)', () => {
-            assert.strictEqual(commandExistence('node', oc()), true);
+            assert.strictEqual(commandExistence('node'), true);
         });
 
         it('returns false for a command that does not exist', () => {
             assert.strictEqual(
-                commandExistence('definitely_not_a_real_command_xyz_999', oc()),
+                commandExistence('definitely_not_a_real_command_xyz_999'),
                 false
             );
         });
@@ -143,14 +135,14 @@ describe('libs/check', () => {
 
     describe('hasGemspec', () => {
         it('returns the gemspec path when <atomName>.gemspec exists', () => {
-            const result = hasGemspec(ATOM_DIR, 'atom', oc());
+            const result = hasGemspec(ATOM_DIR, 'atom');
             assert.ok(result, 'expected a truthy gemspec path');
             assert.ok(result.endsWith('atom.gemspec'));
         });
 
         it('returns false when no gemspec file can be found', () => {
             sinon.stub(fs, 'existsSync').returns(false);
-            assert.strictEqual(hasGemspec('/no/gemspec', 'no_gemspec', oc()), false);
+            assert.strictEqual(hasGemspec('/no/gemspec', 'no_gemspec'), false);
         });
 
         it('finds the variant gemspec when the atom name contains dashes', () => {
@@ -158,7 +150,7 @@ describe('libs/check', () => {
             sinon.stub(fs, 'existsSync')
                 .onFirstCall().returns(false)
                 .onSecondCall().returns(true);
-            const result = hasGemspec('/fake/my-atom', 'my-atom', oc());
+            const result = hasGemspec('/fake/my-atom', 'my-atom');
             assert.ok(result, 'expected variant gemspec to be found');
         });
     });
@@ -167,16 +159,16 @@ describe('libs/check', () => {
 
     describe('isDir', () => {
         it('returns true for an existing directory', () => {
-            assert.strictEqual(isDir(ATOM_DIR, oc()), true);
+            assert.strictEqual(isDir(ATOM_DIR), true);
         });
 
         it('returns false for a non-existent path', () => {
-            assert.strictEqual(isDir('/definitely/not/there_xyz_999', oc()), false);
+            assert.strictEqual(isDir('/definitely/not/there_xyz_999'), false);
         });
 
         it('returns false when the path points to a file', () => {
             const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
-            assert.strictEqual(isDir(gemspecPath, oc()), false);
+            assert.strictEqual(isDir(gemspecPath), false);
         });
     });
 
@@ -186,15 +178,15 @@ describe('libs/check', () => {
         const gemspecPath = path.join(ATOM_DIR, 'atom.gemspec');
 
         it('returns true for an existing file', () => {
-            assert.strictEqual(isFile(gemspecPath, oc()), true);
+            assert.strictEqual(isFile(gemspecPath), true);
         });
 
         it('returns false for a non-existent path', () => {
-            assert.strictEqual(isFile('/definitely/not/there_xyz_999', oc()), false);
+            assert.strictEqual(isFile('/definitely/not/there_xyz_999'), false);
         });
 
         it('returns false when the path points to a directory', () => {
-            assert.strictEqual(isFile(ATOM_DIR, oc()), false);
+            assert.strictEqual(isFile(ATOM_DIR), false);
         });
     });
 });

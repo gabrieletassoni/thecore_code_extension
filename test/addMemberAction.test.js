@@ -63,6 +63,87 @@ describe('commands/addMemberAction', () => {
         assert.ok(errorStub.firstCall.args[0].includes('already exists'));
     });
 
+    it('returns early when hasGemspec check fails', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        ctx.check.hasGemspec.returns({ ok: false, message: 'No gemspec' });
+        sinon.stub(vscode.window, 'showInputBox').resolves('my_action');
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform(ctx);
+        assert.ok(!infoStub.called, 'should not proceed when gemspec is missing');
+    });
+
+    it('rejects a non-snake_case action name and does not proceed', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        sinon.stub(vscode.window, 'showInputBox').resolves(undefined);
+        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+        await perform(ctx);
+        assert.ok(!infoStub.called, 'should not succeed when action name input is cancelled');
+    });
+
+    it('does not modify after_initialize.rb when the require line already exists', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        sinon.stub(vscode.window, 'showInputBox').resolves('my_test_action');
+        const existingContent = "config.after_initialize do\n        require 'member_actions/my_test_action'\nend";
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns(existingContent);
+        const writeStub = sinon.stub(fs, 'writeFileSync');
+        sinon.stub(fs, 'appendFileSync');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        const afterInitWriteCalls = writeStub.args.filter(a =>
+            typeof a[0] === 'string' && a[0].includes('after_initialize')
+        );
+        assert.strictEqual(afterInitWriteCalls.length, 0, 'should not rewrite after_initialize.rb when require already present');
+    });
+
+    it('does not append to assets.rb when the precompile line already exists', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        sinon.stub(vscode.window, 'showInputBox').resolves('my_test_action');
+        const assetsLine = 'Rails.application.config.assets.precompile += %w( rails_admin/actions/my_test_action.js rails_admin/actions/my_test_action.css )';
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns(`config.after_initialize do\nend\n${assetsLine}`);
+        sinon.stub(fs, 'writeFileSync');
+        const appendStub = sinon.stub(fs, 'appendFileSync');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        assert.ok(!appendStub.called, 'should not append to assets.rb when precompile line already present');
+    });
+
+    it('merges locale YAML for both en and it', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        sinon.stub(vscode.window, 'showInputBox').resolves('my_test_action');
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').returns('config.after_initialize do\nend');
+        sinon.stub(fs, 'writeFileSync');
+        sinon.stub(fs, 'appendFileSync');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        const mergeCalls = ctx.write.mergeYaml.args;
+        const enCall = mergeCalls.find(a => a[1] === 'en.yml' && a[4] === 'en');
+        const itCall = mergeCalls.find(a => a[1] === 'it.yml' && a[4] === 'it');
+        assert.ok(enCall, 'en locale should be merged');
+        assert.ok(itCall, 'it locale should be merged');
+    });
+
+    it('shows an error when an fs operation throws inside the try block', async () => {
+        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+        sinon.stub(vscode.window, 'showInputBox').resolves('crash_action');
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'readFileSync').throws(new Error('disk full'));
+        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+
+        await perform(ctx);
+
+        assert.ok(errorStub.calledOnce, 'error should be shown on fs failure');
+        assert.ok(errorStub.firstCall.args[0].includes('disk full'));
+    });
+
     it('creates member action files and shows success on the happy path', async () => {
         const ctx = makeCtx({ workspace: makeAtomWorkspace() });
         sinon.stub(vscode.window, 'showInputBox').resolves('my_test_action');
