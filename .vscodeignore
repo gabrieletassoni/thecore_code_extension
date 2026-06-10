@@ -4,6 +4,7 @@ out/test/**
 src/**
 .gitignore
 .yarnrc
+.npmrc
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/.eslintrc.json
@@ -14,3 +15,13 @@ extension.js
 tests/**
 test/**
 .github/**
+.agents/**
+.claude/**
+AGENTS.md
+CLAUDE.md
+CONTEXT.md
+PUBLISHING.md
+docs/**
+.mocharc.yml
+.vscode-test.mjs
+jsconfig.json
