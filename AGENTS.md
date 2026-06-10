@@ -25,7 +25,7 @@ These are the non-obvious structural decisions that affect how to implement feat
 
 Every command receives a single `ExecutionContext` object (`ctx`) instead of a raw folder. `ExecutionContext` (defined in `libs/executionContext.js`) owns:
 
-- `ctx.workspace` — a `WorkspaceContext` (see below), or `null` if no folder was clicked
+- `ctx.workspace` — a `WorkspaceContext` (see below), or `null` if no workspace is open
 - `ctx.check` — a `CheckContext` with predicate methods that return `{ ok, value?, message? }`
 - `ctx.write` — a `WriteContext` with file-writing methods that also log to the output channel
 - `ctx.log(msg)` / `ctx.show()` — output channel helpers
@@ -47,9 +47,9 @@ Logging happens exclusively in `CheckContext` and `WriteContext` (inside `execut
 
 `libs/workspaceContext.js` exports a `from(folder)` factory that returns:
 
-- `ATOMContext` — when the clicked folder is directly inside `vendor/submodules/`. Provides `atomDir`, `atomName`, and all ATOM-specific path methods (`migrationDir()`, `memberActionsDir()`, etc.)
-- `AppContext` — for all other folders. Provides app-level paths only.
-- `null` — when no folder was provided.
+- `ATOMContext` — when the clicked folder is anywhere inside an ATOM's tree (at or below `vendor/submodules/<atom>/`); resolves to the owning ATOM's root. Provides `atomDir`, `atomName`, and all path methods (`migrationDir()`, `memberActionsDir()`, etc.)
+- `AppContext` — for all other folders, and for invocations without a folder (Command Palette) when a workspace is open. Provides the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()` which point to `config/` instead of `lib/` (see `docs/adr/0001-main-app-actions-live-in-config.md`).
+- `null` — only when no folder was provided **and** no workspace is open.
 
 Commands check `ctx.workspace.type()` (`'atom'` or `'app'`) to branch behavior. Never access `vscode.workspace.workspaceFolders` directly in a command — use `ctx.check.workspaceExists()` and `ctx.workspace.*`.
 
