@@ -183,4 +183,98 @@ describe('libs/executionContext — CheckContext', () => {
             assert.ok(channel.show.calledOnce);
         });
     });
+
+    describe('exec()', () => {
+        it('delegates to execShell with the channel', async () => {
+            const execShellStub = sinon.stub().resolves('output');
+            const configs = require('../../libs/configs');
+            const wc = require('../../libs/workspaceContext');
+            const templates = require('../../libs/templates');
+            const ExecCtxWithStub = proxyquire('../../libs/executionContext', {
+                './os': { execShell: execShellStub, mkDirP: sinon.stub() },
+            });
+            const ctx = new ExecCtxWithStub.ExecutionContext('Test', undefined);
+            const result = await ctx.exec('echo hi', '/tmp');
+            assert.strictEqual(result, 'output');
+            assert.ok(execShellStub.calledWith('echo hi', '/tmp', sinon.match.object));
+        });
+    });
+
+    describe('mkdir()', () => {
+        it('delegates to mkDirP with the channel', async () => {
+            const mkDirPStub = sinon.stub().resolves();
+            const ExecCtxWithStub = proxyquire('../../libs/executionContext', {
+                './os': { execShell: sinon.stub(), mkDirP: mkDirPStub },
+            });
+            const ctx = new ExecCtxWithStub.ExecutionContext('Test', undefined);
+            await ctx.mkdir('/some/dir');
+            assert.ok(mkDirPStub.calledWith('/some/dir', sinon.match.object));
+        });
+    });
+});
+
+describe('libs/executionContext — WriteContext', () => {
+    let execCtxModule, channel, configsStub;
+
+    beforeEach(() => {
+        channel = { show: sinon.stub(), appendLine: sinon.stub(), append: sinon.stub() };
+        sinon.stub(vscode.window, 'createOutputChannel').returns(channel);
+        vscode.workspace.workspaceFolders = [{ uri: { fsPath: APP_DIR } }];
+
+        configsStub = {
+            writeJSONFile: sinon.stub(),
+            writeYAMLFile: sinon.stub(),
+            writeTextFile: sinon.stub(),
+            createGitignoreFile: sinon.stub(),
+            mergeYmlContent: sinon.stub(),
+        };
+
+        execCtxModule = proxyquire('../../libs/executionContext', {
+            './configs': configsStub,
+            './templates': { renderTemplate: sinon.stub().returns('gitignore-content') },
+        });
+    });
+
+    afterEach(() => sinon.restore());
+
+    it('write.jsonFile() logs and delegates to configs.writeJSONFile', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.jsonFile('/dir', 'file.json', { a: 1 });
+        assert.ok(configsStub.writeJSONFile.calledWith('/dir', 'file.json', { a: 1 }));
+        assert.ok(channel.appendLine.called);
+    });
+
+    it('write.yamlFile() logs and delegates to configs.writeYAMLFile', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.yamlFile('/dir', 'file.yml', { key: 'val' });
+        assert.ok(configsStub.writeYAMLFile.calledWith('/dir', 'file.yml', { key: 'val' }));
+        assert.ok(channel.appendLine.called);
+    });
+
+    it('write.textFile() logs and delegates to configs.writeTextFile', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.textFile('/dir', 'file.txt', 'content');
+        assert.ok(configsStub.writeTextFile.calledWith('/dir', 'file.txt', 'content'));
+        assert.ok(channel.appendLine.called);
+    });
+
+    it('write.gitignoreFile() writes the rendered shared/gitignore template', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.gitignoreFile('/dir');
+        assert.ok(configsStub.writeTextFile.calledWith('/dir', '.gitignore', 'gitignore-content'));
+    });
+
+    it('write.mergeYaml() delegates to configs.mergeYmlContent', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.mergeYaml('/dir', 'en.yml', 'my_action', 'My Action', 'en');
+        assert.ok(configsStub.mergeYmlContent.calledWith('/dir', 'en.yml', 'my_action', 'My Action', 'en'));
+    });
+
+    it('write.jsonFile() logs both start and completion messages', () => {
+        const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+        ctx.write.jsonFile('/dir', 'f.json', {});
+        assert.strictEqual(channel.appendLine.callCount, 2);
+        assert.ok(channel.appendLine.firstCall.args[0].includes('Creating JSON'));
+        assert.ok(channel.appendLine.secondCall.args[0].includes('created successfully'));
+    });
 });
