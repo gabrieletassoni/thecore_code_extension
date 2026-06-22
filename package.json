@@ -24,6 +24,9 @@
   ],
   "activationEvents": [],
   "main": "./out/main.js",
+  "bin": {
+    "thecore": "./bin/thecore.js"
+  },
   "contributes": {
     "menus": {
       "explorer/context": [
@@ -130,6 +133,7 @@
     "sinon": "^19.0.5"
   },
   "dependencies": {
+    "commander": "^15.0.0",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21"
   }
