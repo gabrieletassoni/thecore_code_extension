@@ -19,7 +19,7 @@ A `rails_admin` backend UI action presented as a top-level navigation entry, not
 A `rails_admin` backend UI action bound to a single record, presented as a per-row button in a model's list view.
 
 **Target**:
-What a Dual-context Command generates code into: the owning ATOM when invoked from anywhere inside that ATOM's folder tree, otherwise the Main App. Command Palette invocations (no clicked folder) target the Main App.
+What a Dual-context Command generates code into: the owning ATOM when the invocation folder (or current working directory in the Headless CLI) is anywhere inside that ATOM's folder tree, otherwise the Main App.
 _Avoid_: context (collides with VS Code's "context menu" and `ExecutionContext`)
 
 **Dual-context Command**:
@@ -39,12 +39,16 @@ The operation performed by the Check Practices command: scanning an ATOM or Main
 _Avoid_: linting, validation, code check
 
 **Violation**:
-A single non-conformance detected during a Practices Audit, reported as a VS Code diagnostic with a file path, line number, message, and severity (`Error` or `Warning`). May carry an auto-fix.
+A single non-conformance detected during a Practices Audit, identified by file path, line number, message, and severity (`Error` or `Warning`). May carry an auto-fix.
 _Avoid_: error, warning, issue (too generic)
 
 **Fixable Violation**:
-A Violation that carries an `apply(ctx)` fix function the extension can execute automatically when the user consents via the QuickPick prompt after the audit.
+A Violation that the extension can remediate automatically when given consent: via the QuickPick prompt in VS Code, or via the `--fix` flag in the Headless CLI.
 _Avoid_: auto-fix (alone), suggestion
+
+**Headless CLI**:
+The `thecore` binary that exposes all extension commands as non-interactive subcommands. Every input that would come from a VS Code dialog is passed as a CLI flag instead; the Target is resolved from the current working directory; output goes to stdout/stderr with a process exit code.
+_Avoid_: CLI mode, non-interactive mode, scripted mode
 
 **Skeleton Marker**:
 A string that must be present in a generated file as structural evidence that the file was produced from the correct Thecore template (e.g. `RailsAdmin::Config::Actions.add_action`, `Rails.application.configure do`). Checked by `hasSkeletonMarker(content, marker)` in `libs/check.js`.
