@@ -74,6 +74,61 @@ When `Add a Model` is run, the extension:
 
 4. Adds `include Api::<Model>` and `include RailsAdmin::<Model>` to the generated model class.
 
+## Headless CLI
+
+All extension commands are also available as a non-interactive CLI (`thecore`), suitable for shell scripts, CI pipelines, and Docker build steps. Every input that would come from a VS Code dialog is passed as a flag instead.
+
+### Installation
+
+```bash
+npm install -g thecore
+```
+
+### Target resolution
+
+The CLI resolves the **Target** (ATOM or Main App) from the current working directory — the same logic used by the extension's context menu. Run from inside `vendor/submodules/<atom>/` to target that ATOM; run from the Main App root to target the Main App.
+
+### Commands
+
+```bash
+# Scaffold a new Thecore 3 Rails application in an empty directory
+thecore create-app
+
+# Generate .devcontainer configuration
+thecore setup-dev-container --name "My Project"
+
+# Create a new ATOM under vendor/submodules/
+thecore create-atom \
+  --name "My Module" \
+  --summary "Short summary" \
+  --description "Full description" \
+  --author "Your Name" \
+  --email "you@example.com" \
+  --url "https://github.com/org/my_module"
+
+# Add a Model (run from inside an ATOM or the Main App root)
+thecore add-model --name Invoice
+thecore add-model --name Invoice --fields "amount:decimal due_date:date"
+
+# Add a DB Migration
+thecore add-migration --name AddDueDateToInvoices
+thecore add-migration --name AddDueDateToInvoices --fields "due_date:date"
+
+# Add a Root Action
+thecore add-root-action --name my_dashboard
+
+# Add a Member Action
+thecore add-member-action --name approve
+
+# Audit for Thecore conventions (exits 1 if Violations are found)
+thecore check-practices
+
+# Audit and auto-fix all Fixable Violations
+thecore check-practices --fix
+```
+
+All commands print log output to stdout and error messages to stderr. Exit code is 0 on success and 1 on failure or when Violations are found.
+
 ## Requirements
 
 The following tools must be available in the environment:

@@ -27,4 +27,38 @@ describe('bin/thecore CLI', () => {
         const result = run('not-a-command');
         assert.strictEqual(result.status, 1);
     });
+
+    const subcommands = [
+        'setup-dev-container',
+        'create-app',
+        'create-atom',
+        'add-model',
+        'add-migration',
+        'add-root-action',
+        'add-member-action',
+        'check-practices',
+    ];
+
+    for (const sub of subcommands) {
+        it(`${sub} --help exits 0`, () => {
+            const result = run(sub, '--help');
+            assert.strictEqual(result.status, 0, `${sub} --help should exit 0, got:\n${result.stderr}`);
+        });
+    }
+
+    const requiredFlagSubcommands = [
+        { sub: 'setup-dev-container', flag: '--name' },
+        { sub: 'create-atom', flag: '--name' },
+        { sub: 'add-model', flag: '--name' },
+        { sub: 'add-migration', flag: '--name' },
+        { sub: 'add-root-action', flag: '--name' },
+        { sub: 'add-member-action', flag: '--name' },
+    ];
+
+    for (const { sub, flag } of requiredFlagSubcommands) {
+        it(`${sub} without ${flag} exits 1`, () => {
+            const result = run(sub);
+            assert.strictEqual(result.status, 1, `${sub} without ${flag} should exit 1`);
+        });
+    }
 });

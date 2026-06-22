@@ -31,6 +31,12 @@ describe('bin/vscode-shim', () => {
             assert.strictEqual(result, 'Invoice');
         });
 
+        it('resolves the value by placeHolder when prompt is absent', async () => {
+            const { shim } = makeShim({ flags: { 'Enter the name of the ATOM': 'my_atom' } });
+            const result = await shim.window.showInputBox({ placeHolder: 'Enter the name of the ATOM' });
+            assert.strictEqual(result, 'my_atom');
+        });
+
         it('calls exit(1) and writes to stderr when validateInput returns an error string', async () => {
             const { shim, stderr, exits } = makeShim({ flags: { 'Model name': 'bad name' } });
             await shim.window.showInputBox({
@@ -52,10 +58,69 @@ describe('bin/vscode-shim', () => {
         });
     });
 
+    describe('showQuickPick', () => {
+        it('returns "Yes" when fix is true', async () => {
+            const { shim } = makeShim({ fix: true });
+            const result = await shim.window.showQuickPick(['Yes', 'No'], {});
+            assert.strictEqual(result, 'Yes');
+        });
+
+        it('returns undefined when fix is false', async () => {
+            const { shim } = makeShim({ fix: false });
+            const result = await shim.window.showQuickPick(['Yes', 'No'], {});
+            assert.strictEqual(result, undefined);
+        });
+    });
+
     describe('workspace', () => {
         it('workspaceFolders[0].uri.fsPath equals the cwd provided at construction', () => {
             const { shim } = makeShim({ cwd: '/my/project' });
             assert.strictEqual(shim.workspace.workspaceFolders[0].uri.fsPath, '/my/project');
+        });
+    });
+
+    describe('createDiagnosticCollection + printDiagnostics', () => {
+        it('printDiagnostics returns 0 and writes nothing when no violations are accumulated', () => {
+            const { shim, stdout } = makeShim();
+            const code = shim.printDiagnostics();
+            assert.strictEqual(code, 0);
+            assert.strictEqual(stdout.written, '');
+        });
+
+        it('printDiagnostics returns 1 and formats violations after collection.set() calls', () => {
+            const { shim, stdout } = makeShim({ cwd: '/proj' });
+            const coll = shim.languages.createDiagnosticCollection('thecore');
+            const uri = shim.Uri.file('/proj/app/models/invoice.rb');
+            const pos = new shim.Position(4, 0);
+            const diag = new shim.Diagnostic(new shim.Range(pos, pos), 'missing include', shim.DiagnosticSeverity.Error);
+            coll.set(uri, [diag]);
+            const code = shim.printDiagnostics();
+            assert.strictEqual(code, 1);
+            assert.ok(stdout.written.includes('invoice.rb'));
+            assert.ok(stdout.written.includes('missing include'));
+            assert.ok(stdout.written.includes('[Error]'));
+        });
+    });
+
+    describe('getExitCode', () => {
+        it('returns 0 initially', () => {
+            const { shim } = makeShim();
+            assert.strictEqual(shim.getExitCode(), 0);
+        });
+
+        it('returns 1 after showErrorMessage is called', async () => {
+            const { shim } = makeShim();
+            await shim.window.showErrorMessage('oops');
+            assert.strictEqual(shim.getExitCode(), 1);
+        });
+    });
+
+    describe('createOutputChannel', () => {
+        it('appendLine writes to stdout', () => {
+            const { shim, stdout } = makeShim();
+            const channel = shim.window.createOutputChannel('test');
+            channel.appendLine('hello from log');
+            assert.ok(stdout.written.includes('hello from log'));
         });
     });
 

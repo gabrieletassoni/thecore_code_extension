@@ -1,10 +1,22 @@
 'use strict';
 
 function createVscodeShim({ flags = {}, fix = false, cwd = process.cwd(), stdout = process.stdout, stderr = process.stderr, exit = process.exit } = {}) {
-    return {
+    let hasError = false;
+    const allDiagnostics = [];
+    const severityLabel = (s) => s === 0 ? 'Error' : 'Warning';
+    const shim = {
+        getExitCode: () => hasError ? 1 : 0,
+        printDiagnostics: () => {
+            if (allDiagnostics.length === 0) return 0;
+            for (const { uri, diagnostic } of allDiagnostics) {
+                const line = diagnostic.range ? diagnostic.range.start.line : 0;
+                stdout.write(`${uri.fsPath}:${line}: [${severityLabel(diagnostic.severity)}] ${diagnostic.message}\n`);
+            }
+            return 1;
+        },
         window: {
             showInputBox: async (opts) => {
-                const value = flags[opts.prompt];
+                const value = flags[opts.prompt || opts.placeHolder];
                 if (opts.validateInput) {
                     const err = await opts.validateInput(value);
                     if (err) {
@@ -15,19 +27,25 @@ function createVscodeShim({ flags = {}, fix = false, cwd = process.cwd(), stdout
                 }
                 return value;
             },
-            showErrorMessage: (msg) => { stderr.write(`${msg}\n`); return Promise.resolve(); },
+            showErrorMessage: (msg) => { hasError = true; stderr.write(`${msg}\n`); return Promise.resolve(); },
             showInformationMessage: (msg) => { stdout.write(`${msg}\n`); return Promise.resolve(); },
             showWarningMessage: (msg) => { stdout.write(`${msg}\n`); return Promise.resolve(); },
-            showQuickPick: (items) => fix ? Promise.resolve(items) : Promise.resolve(undefined),
-            createOutputChannel: () => ({ show: () => {}, appendLine: () => {}, append: () => {} }),
+            showQuickPick: (items) => fix ? Promise.resolve(items[0]) : Promise.resolve(undefined),
+            createOutputChannel: () => ({
+                show: () => {},
+                appendLine: (msg) => { stdout.write(`${msg}\n`); },
+                append: (msg) => { stdout.write(msg); },
+            }),
         },
         workspace: {
             workspaceFolders: [{ uri: { fsPath: cwd } }],
         },
         languages: {
             createDiagnosticCollection: () => ({
-                set: () => {},
-                clear: () => {},
+                set: (uri, diagnostics) => {
+                    for (const d of diagnostics) allDiagnostics.push({ uri, diagnostic: d });
+                },
+                clear: () => { allDiagnostics.length = 0; },
                 delete: () => {},
                 dispose: () => {},
             }),
@@ -39,6 +57,7 @@ function createVscodeShim({ flags = {}, fix = false, cwd = process.cwd(), stdout
         Uri: { file: (p) => ({ fsPath: p }) },
         commands: { registerCommand: (_id, _handler) => ({ dispose: () => {} }) },
     };
+    return shim;
 }
 
 module.exports = { createVscodeShim };
