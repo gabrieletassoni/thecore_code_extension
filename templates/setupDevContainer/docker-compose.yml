@@ -31,7 +31,6 @@ services:
 
   redis:
     image: redis:7-bookworm
-    restart: unless-stopped
     command: redis-server
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -41,7 +40,6 @@ services:
 
   db:
     image: postgres:15-bookworm
-    restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./create-db-user.sql:/docker-entrypoint-initdb.d/create-db-user.sql
