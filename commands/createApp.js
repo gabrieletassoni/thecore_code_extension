@@ -72,6 +72,13 @@ async function perform(ctx) {
             await ctx.exec('bundle install', workspaceRoot);
 
             ctx.log('Adding .gitlab-ci.yml file.');
+            // Every job below only runs when the `version` file changes (and never for
+            // tag pipelines) — this is the fleet-wide convention: a pipeline run is a
+            // deliberate version bump, not every commit.
+            const onlyOnVersionBump = {
+                changes: ['version'],
+                variables: ['$CI_COMMIT_TAG == null']
+            };
             const gitlabCiObject = {
                 image: 'gabrieletassoni/vscode-devcontainers-thecore:3',
                 variables: { DISABLE_SPRING: 1 },
@@ -82,20 +89,23 @@ async function perform(ctx) {
                 },
                 build: {
                     stage: 'build',
-                    rules: [{ if: '$CI_COMMIT_TAG', when: 'never' }, { when: 'always' }],
+                    only: onlyOnVersionBump,
                     script: ['sudo -E /usr/bin/app-compile.sh']
                 },
                 'to-dev': {
-                    when: 'on_success',
                     stage: 'delivery',
+                    dependencies: ['build'],
+                    only: onlyOnVersionBump,
                     cache: [],
                     variables: { TARGETENV: 'dev' },
                     script: ['/usr/bin/docker-deploy.sh']
                 },
                 'to-prod': {
-                    when: 'manual',
-                    allow_failure: false,
                     stage: 'deploy',
+                    when: 'manual',
+                    dependencies: ['build'],
+                    only: onlyOnVersionBump,
+                    allow_failure: true,
                     cache: [],
                     script: ['/usr/bin/docker-deploy.sh']
                 }

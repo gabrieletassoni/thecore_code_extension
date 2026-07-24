@@ -4,6 +4,17 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Added
+- `templates/setupDevContainer/devcontainer.json` — `Anthropic.claude-code` extension, `ghcr.io/devcontainers-extra/features/claude-code:2` feature, and `mounts` persisting `.claude`/`.claude.json`/`.bundle`/`.gem`/glab-cli config across container rebuilds
+- `templates/setupDevContainer/docker-compose.yml` — `RAILS_ENV`/`SECRET_KEY_BASE` dev defaults (required for JWT decoding) and a documented rationale for the `user: vscode` override
+
+### Changed
+- `templates/setupDevContainer/devcontainer.json` — `postCreateCommand` now self-heals `/usr/local/bundle` ownership before bundling and runs `npx skills update --project --yes`, matching the convention adopted across host apps
+- `templates/setupDevContainer/backend.code-workspace` — associate `Gemfile.base` (not `Gemfile`) with the `gemfile` language, matching the file the generated devcontainer actually formats
+- `commands/createApp.js` — generated `.gitlab-ci.yml` now gates `build`/`to-dev`/`to-prod` on `only: changes: [version]` (skipping tag pipelines) instead of running on every commit, matching the convention adopted across host apps
+
 ## [3.1.8]
 
 ### Fixed

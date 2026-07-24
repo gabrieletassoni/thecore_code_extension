@@ -10,8 +10,17 @@
 			"extensions": [
 				"dbaeumer.vscode-eslint",
 				"ms-vscode.extension-test-runner",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"Anthropic.claude-code"
 			]
 		}
-	}
+	},
+	"features": {
+		"ghcr.io/devcontainers-extra/features/claude-code:2": {}
+	},
+	"postCreateCommand": "npx skills update --project --yes",
+	"mounts": [
+		"source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
+		"source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind"
+	]
 }

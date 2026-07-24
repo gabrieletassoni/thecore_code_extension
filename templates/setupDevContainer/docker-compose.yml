@@ -22,7 +22,17 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/1
       DATABASE_URL: postgres://postgres:postgres@db:5432/{{name}}?pool=5
+      RAILS_ENV: development
+      SECRET_KEY_BASE: dummy
 
+    # Run all container processes as the non-root dev user. Without this the
+    # container's default user is root (the Dockerfile ends on `USER root`),
+    # so anything that isn't `postCreateCommand` (which devcontainer.json's
+    # remoteUser runs as vscode) — devcontainer feature installs, the
+    # `sleep infinity` command, a plain `docker compose exec` — creates
+    # root-owned files. That mixed ownership can break `bundle
+    # update`/`bundle install`: /usr/local/bundle/bin has the sticky bit set,
+    # so vscode can't overwrite or delete binstubs it doesn't own.
     # Uncomment the next line to use a non-root user for all processes.
     # user: vscode
 

@@ -30,7 +30,8 @@
 				"anweber.vscode-httpyac",
 				"mhutchie.git-graph",
 				"gabrieletassoni.thecore",
-				"Shopify.ruby-lsp"
+				"Shopify.ruby-lsp",
+				"Anthropic.claude-code"
 			],
 			"settings": {
 				"rubyLsp.rubyVersionManager": { "identifier": "none" },
@@ -53,10 +54,26 @@
 		"ghcr.io/SrzStephen/devcontainer-features/gitlab-cli:1": {},
 		"ghcr.io/devcontainers/features/git-lfs:1": {},
 		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers-extra/features/claude-code:2": {},
 		"ghcr.io/devcontainers-extra/features/apt-packages:1": { "packages": "graphviz" }
 	},
 
-	"postCreateCommand": "bundle install",
+	"postCreateCommand": "sudo chown -R vscode:vscode /usr/local/bundle && bundle update --bundler && bundle update && GITHUB_TOKEN=\"${localEnv:GITHUB_TOKEN}\" npx skills update --project --yes && prune-deleted-skills.sh",
+
+	// "mounts": [
+	// 	Uncomment only the lines below matching auth/config you already have set up on your host —
+	// 	not everyone has glab/bundle/gem/Claude credentials in place, so nothing is mounted by default.
+	// 	// Requires: glab CLI already authenticated on the host (~/.config/glab-cli)
+	// 	"source=${localEnv:HOME}/.config/glab-cli,target=/home/vscode/.config/glab-cli,type=bind",
+	// 	// Requires: Bundler config already set up on the host (~/.bundle), e.g. credentials for private gem sources
+	// 	"source=${localEnv:HOME}/.bundle,target=/home/vscode/.bundle,type=bind",
+	// 	// Requires: RubyGems credentials already set up on the host (~/.gem), e.g. for pushing gems
+	// 	"source=${localEnv:HOME}/.gem,target=/home/vscode/.gem,type=bind",
+	// 	// Requires: Claude Code config already present on the host (~/.claude)
+	// 	"source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",
+	// 	// Requires: Claude Code already authenticated on the host (~/.claude.json)
+	// 	"source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind"
+	// ],
 
 	"remoteUser": "vscode"
 }

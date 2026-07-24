@@ -4,6 +4,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
 const vscode = require('vscode');
+const { parse: parseJsonc } = require('jsonc-parser');
 const { perform } = require('../commands/setupDevContainer');
 const { makeCtx, FAKE_ROOT } = require('./helpers/makeCtx');
 
@@ -39,8 +40,23 @@ describe('commands/setupDevContainer', () => {
 
         await perform(ctx);
 
-        // devcontainer.json, docker-compose.yml, Dockerfile, create-db-user.sql, backend.code-workspace
-        assert.ok(ctx.write.textFile.callCount >= 5, 'at least 5 files should be written');
+        // devcontainer.json, docker-compose.yml, Dockerfile, create-db-user.sql,
+        // backend.code-workspace, .thecore-template-version
+        assert.ok(ctx.write.textFile.callCount >= 6, 'at least 6 files should be written');
+    });
+
+    it('stamps .thecore-template-version with the extension version', async () => {
+        const ctx = makeCtx();
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        const call = ctx.write.textFile.args.find(([, name]) => name === '.thecore-template-version');
+        assert.ok(call, '.thecore-template-version should be written');
+        assert.strictEqual(call[2], require('../package.json').version);
     });
 
     it('shows an error message when directory creation throws', async () => {
@@ -66,7 +82,7 @@ describe('commands/setupDevContainer', () => {
 
         const call = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
         assert.ok(call, 'devcontainer.json should be written');
-        const parsed = JSON.parse(call[2]);
+        const parsed = parseJsonc(call[2]);
         assert.strictEqual(parsed.name, 'My Project');
         assert.strictEqual(parsed.service, 'app');
         assert.ok(Array.isArray(parsed.customizations.vscode.extensions));
@@ -98,5 +114,24 @@ describe('commands/setupDevContainer', () => {
         const call = ctx.write.textFile.args.find(([, name]) => name === 'Dockerfile');
         assert.ok(call, 'Dockerfile should be written');
         assert.ok(call[2].includes('gabrieletassoni/vscode-devcontainers-thecore:3'));
+    });
+
+    it('wires prune-deleted-skills.sh (bundled globally in the image) into postCreateCommand', async () => {
+        const ctx = makeCtx();
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        // prune-deleted-skills.sh ships in scripts/ (copied to /usr/bin/ in Dockerfile.common),
+        // not scaffolded per-project, so there is no ctx.write.textFile call for it.
+        const scriptCall = ctx.write.textFile.args.find(([, name]) => name === 'prune-deleted-skills.sh');
+        assert.ok(!scriptCall, 'prune-deleted-skills.sh should not be scaffolded into the project');
+
+        const devcontainerCall = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
+        const parsed = parseJsonc(devcontainerCall[2]);
+        assert.ok(parsed.postCreateCommand.includes('prune-deleted-skills.sh'));
     });
 });

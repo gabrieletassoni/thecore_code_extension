@@ -6,6 +6,7 @@ const path = require('path');
 const { renderTemplate } = require('../libs/templates');
 const { railsStyleKey } = require('../libs/helpers');
 const { CommandRunner } = require('../libs/commandRunner');
+const { version: EXTENSION_VERSION } = require('../package.json');
 
 async function perform(ctx) {
     ctx.show();
@@ -42,6 +43,10 @@ async function perform(ctx) {
 
             ctx.write.textFile(devcontainerDir, 'backend.code-workspace',
                 renderTemplate('setupDevContainer/backend.code-workspace'));
+
+            // Stamped so thecore-motd.sh (see thecore_devcontainer/scripts/) can warn when
+            // this scaffold predates the extension version baked into the dev image.
+            ctx.write.textFile(devcontainerDir, '.thecore-template-version', EXTENSION_VERSION);
 
             ctx.log('✅ .devcontainer directory created successfully.');
             vscode.window.showInformationMessage('✅ .devcontainer directory created successfully.');

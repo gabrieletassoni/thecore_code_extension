@@ -4,7 +4,7 @@ This file documents the codebase structure, conventions, and development workflo
 
 > **⚠️ MANDATORY — read [AGENTS.md](AGENTS.md) before writing any code.**
 > When implementing a new feature or changing the codebase, AGENTS.md requires running the
-> `/grill-with-docs` → `/to-prd` → `/to-issues` → `/tdd` skill sequence **before** any code is written.
+> `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/tdd` skill sequence **before** any code is written.
 > This file (CLAUDE.md) covers structure and conventions only; the mandatory workflow lives in AGENTS.md.
 
 ## Project Overview
