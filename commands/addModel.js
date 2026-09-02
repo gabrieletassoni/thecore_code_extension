@@ -1,9 +1,6 @@
 'use strict';
 
 const vscode = require('vscode');
-const fs = require('fs');
-const path = require('path');
-const { renderTemplate } = require('../libs/templates');
 const { isPascalCase } = require('../libs/check');
 const { CommandRunner } = require('../libs/commandRunner');
 
@@ -44,10 +41,26 @@ async function perform(ctx) {
     });
 
     try {
-        const output = await ctx.exec(
-            `bundle install && rails g model "${modelName}" ${modelDefinition || ''} --skip-test-framework`,
-            ctx.workspace.appRoot()
-        );
+        // thecore_generators registers `config.app_generators.orm :thecore` (see
+        // docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md in the thecore
+        // repo), so plain `rails g model` is already fully Thecore-aware: it places files in the
+        // right ATOM/host-app location itself, no longer generates the Api::/RailsAdmin::/
+        // Endpoints:: concern trio by default (ADR 0001), no longer needs `include` lines patched
+        // into the model file, and generates real test files (no more --skip-test-framework — see
+        // thecore_generators#4/#5). This command's only remaining job is to shell out and trust it.
+        //
+        // `--atom=<name>` is thecore_generators' explicit, cwd-independent override for exactly
+        // this kind of scripted/non-interactive caller (Thecore::Generators::WorkspaceContext):
+        // without it, ATOM detection reads the *generator process's* `Dir.pwd`, but plain `rails`
+        // (unlike `bin/rails` invoked directly) re-execs itself after walking back up to the app
+        // root looking for `bin/rails`, silently resetting `Dir.pwd` there before the generator
+        // ever runs — so relying on cwd here would be fragile. Passing the ATOM name we already
+        // know (from `ctx.workspace`) sidesteps that entirely. `--non-interactive` skips the
+        // inverse-association cardinality prompt (ADR 0003) — there's no real TTY behind `ctx.exec`.
+        const atomFlag = isAtom ? ` --atom=${ctx.workspace.atomName}` : '';
+        const command = `bundle install && rails g model "${modelName}" ${modelDefinition || ''}${atomFlag} --non-interactive`;
+
+        const output = await ctx.exec(command, ctx.workspace.appRoot());
 
         if (!output) {
             const msg = 'No output from rails g command exists, cannot go on';
@@ -55,65 +68,6 @@ async function perform(ctx) {
             vscode.window.showErrorMessage(`${msg}, please inspect the output window.`);
             return;
         }
-
-        const migrationFiles = [...output.matchAll(/^\s+create\s+(db\/migrate\/.+\.rb)$/gm)];
-        const modelFiles = [...output.matchAll(/^\s+create\s+(app\/models\/.+\.rb)$/gm)];
-
-        if (!migrationFiles.length || !modelFiles.length) {
-            const msg = 'No evidence of migration or model file creation in rails g output, cannot go on';
-            ctx.log(`❌ ${msg}, please inspect lines above.`);
-            vscode.window.showErrorMessage(`${msg}, please inspect output window.`);
-            return;
-        }
-
-        migrationFiles.forEach(el => {
-            const srcPath = path.join(ctx.workspace.appRoot(), el[1]);
-            if (isAtom) {
-                ctx.mkdir(ctx.workspace.migrationDir());
-                ctx.log(`📄 Moving the migration file to: ${ctx.workspace.migrationDir()}`);
-                fs.renameSync(srcPath, path.join(ctx.workspace.migrationDir(), path.basename(srcPath)));
-            } else {
-                ctx.log(`📄 Migration created at: ${srcPath}`);
-            }
-        });
-
-        modelFiles.forEach(el => {
-            const srcPath = path.join(ctx.workspace.appRoot(), el[1]);
-            const basename = path.basename(srcPath);
-            let finalModelFile;
-
-            if (isAtom) {
-                ctx.mkdir(ctx.workspace.modelDir());
-                ctx.log(`📄 Moving the model file to: ${ctx.workspace.modelDir()}`);
-                finalModelFile = path.join(ctx.workspace.modelDir(), basename);
-                fs.renameSync(srcPath, finalModelFile);
-            } else {
-                finalModelFile = srcPath;
-                ctx.log(`📄 Model created at: ${finalModelFile}`);
-            }
-
-            ['api', 'rails_admin', 'endpoints'].forEach(type => {
-                ctx.mkdir(ctx.workspace.concernsDir(type));
-            });
-
-            ctx.write.textFile(ctx.workspace.concernsDir('api'), basename, renderTemplate('addModel/api_concern.rb', { modelName }));
-            ctx.write.textFile(ctx.workspace.concernsDir('rails_admin'), basename, renderTemplate('addModel/rails_admin_concern.rb', { modelName }));
-            ctx.write.textFile(ctx.workspace.concernsDir('endpoints'), basename, renderTemplate('addModel/endpoints_concern.rb', { modelName }));
-
-            const concernIncluders = [
-                `  include Api::${modelName}`,
-                `  include RailsAdmin::${modelName}`
-            ];
-            const modelFileContent = fs.readFileSync(finalModelFile, 'utf8');
-            if (!modelFileContent.includes(`include ${modelName}`)) {
-                const updated = modelFileContent.replace(
-                    / < ApplicationRecord/,
-                    ` < ApplicationRecord\n${concernIncluders.join('\n')}`
-                );
-                fs.writeFileSync(finalModelFile, updated, 'utf8');
-                ctx.log(`✅ Modified the ${modelName} RB file adding the concern's includes.`);
-            }
-        });
 
         ctx.log(`✅ The model ${modelName} has been added successfully.`);
         vscode.window.showInformationMessage(`The model ${modelName} has been added successfully.`);

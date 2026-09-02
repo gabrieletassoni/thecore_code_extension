@@ -2,7 +2,6 @@
 
 const assert = require('assert');
 const sinon = require('sinon');
-const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addModel');
 const { makeCtx, makeAtomWorkspace, makeAppWorkspace, FAKE_ROOT } = require('./helpers/makeCtx');
@@ -40,6 +39,7 @@ describe('commands/addModel', () => {
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
         await perform(ctx);
         assert.ok(!infoStub.called);
+        assert.ok(!ctx.exec.called, 'should not exec when name input is cancelled');
     });
 
     it('shows an error when execShell produces no output', async () => {
@@ -55,28 +55,6 @@ describe('commands/addModel', () => {
         assert.ok(errorStub.calledOnce);
     });
 
-    it('shows success when model and migration files are created in the main app', async () => {
-        const output = [
-            '      create  db/migrate/20240101000000_create_my_model.rb',
-            '      create  app/models/my_model.rb',
-        ].join('\n');
-
-        const ctx = makeCtx({ workspace: makeAppWorkspace() });
-        ctx.exec.resolves(output);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('MyModel')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'readFileSync').returns('class MyModel < ApplicationRecord\nend\n');
-        sinon.stub(fs, 'writeFileSync');
-        sinon.stub(fs, 'renameSync');
-        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-
-        await perform(ctx);
-
-        assert.ok(infoStub.calledOnce, 'success message should be shown');
-        assert.ok(infoStub.firstCall.args[0].includes('MyModel'));
-    });
-
     it('rejects a non-PascalCase model name and does not proceed', async () => {
         const ctx = makeCtx({ workspace: makeAppWorkspace() });
         // Return an invalid name that fails isPascalCase — CommandRunner calls validateInput
@@ -88,79 +66,77 @@ describe('commands/addModel', () => {
         assert.ok(!ctx.exec.called, 'should not exec when name input is cancelled');
     });
 
-    it('accepts an empty optional migration definition and still runs rails g', async () => {
-        const output = [
-            '      create  db/migrate/20240101000000_create_my_model.rb',
-            '      create  app/models/my_model.rb',
-        ].join('\n');
+    it('shows an error when an exec failure throws inside the try block', async () => {
         const ctx = makeCtx({ workspace: makeAppWorkspace() });
-        ctx.exec.resolves(output);
+        ctx.exec.rejects(new Error('rails g failed'));
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('MyModel')
-            .onSecondCall().resolves(''); // empty optional definition
-        sinon.stub(fs, 'readFileSync').returns('class MyModel < ApplicationRecord\nend\n');
-        sinon.stub(fs, 'writeFileSync');
-        sinon.stub(fs, 'renameSync');
-        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
-
-        await perform(ctx);
-
-        assert.ok(ctx.exec.calledOnce, 'should execute rails g even with empty definition');
-        assert.ok(ctx.exec.firstCall.args[0].includes('rails g model'), 'command should include rails g model');
-        assert.ok(infoStub.calledOnce, 'success message should be shown');
-    });
-
-    it('shows an error when rails g output has no migration or model lines', async () => {
-        const ctx = makeCtx({ workspace: makeAppWorkspace() });
-        ctx.exec.resolves('some unrelated output\nno create lines here');
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('MyModel')
-            .onSecondCall().resolves('');
+            .onSecondCall().resolves('name:string');
         const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
 
         await perform(ctx);
 
-        assert.ok(errorStub.calledOnce, 'error should be shown when output has no file creation lines');
+        assert.ok(errorStub.calledOnce, 'error should be shown on exec failure');
+        assert.ok(errorStub.firstCall.args[0].includes('rails g failed'));
     });
 
-    it('shows an error when an fs operation throws inside the try block', async () => {
-        const output = [
-            '      create  db/migrate/20240101000000_create_my_model.rb',
-            '      create  app/models/my_model.rb',
-        ].join('\n');
-        const ctx = makeCtx({ workspace: makeAppWorkspace() });
-        ctx.exec.resolves(output);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('MyModel')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'readFileSync').throws(new Error('disk error'));
-        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
+    describe('main app context', () => {
+        it('shells out to `rails g model` in the app root and trusts the result, with no --atom flag', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.exec.resolves('      create  app/models/my_model.rb\n      create  db/migrate/20240101000000_create_my_models.rb\n');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('MyModel')
+                .onSecondCall().resolves('name:string');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        await perform(ctx);
+            await perform(ctx);
 
-        assert.ok(errorStub.calledOnce, 'error should be shown on fs failure');
-        assert.ok(errorStub.firstCall.args[0].includes('disk error'));
+            assert.ok(ctx.exec.calledOnce, 'should shell out exactly once');
+            const [command, cwd] = ctx.exec.firstCall.args;
+            assert.ok(command.includes('rails g model "MyModel" name:string'), 'command should invoke rails g model with the given name/definition');
+            assert.ok(!command.includes('--atom'), 'no --atom flag should be passed outside ATOM context');
+            assert.ok(command.includes('--non-interactive'), 'command should skip the interactive association prompt');
+            assert.ok(!command.includes('--skip-test-framework'), 'test generation must not be suppressed anymore');
+            assert.strictEqual(cwd, FAKE_ROOT, 'should run from the app root');
+            assert.ok(ctx.check.railsAppValid.called, 'the Rails app guard should run');
+            assert.ok(!ctx.check.hasGemspec.called, 'gemspec check must not run for the main app');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+            assert.ok(infoStub.firstCall.args[0].includes('MyModel'));
+        });
+
+        it('accepts an empty optional model definition and still runs rails g', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.exec.resolves('      create  app/models/my_model.rb\n');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('MyModel')
+                .onSecondCall().resolves(''); // empty optional definition
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(ctx.exec.calledOnce, 'should execute rails g even with empty definition');
+            assert.ok(ctx.exec.firstCall.args[0].includes('rails g model'), 'command should include rails g model');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+        });
     });
 
-    it('moves files to ATOM dirs when in ATOM context', async () => {
-        const output = [
-            '      create  db/migrate/20240101000000_create_my_model.rb',
-            '      create  app/models/my_model.rb',
-        ].join('\n');
+    describe('ATOM context', () => {
+        it('passes --atom=<name>, runs from the app root, and trusts the result without moving any files', async () => {
+            const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+            ctx.exec.resolves('      create  app/models/my_model.rb\n      create  db/migrate/20240101000000_create_my_models.rb\n');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('MyModel')
+                .onSecondCall().resolves('name:string');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves(output);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('MyModel')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'readFileSync').returns('class MyModel < ApplicationRecord\nend\n');
-        sinon.stub(fs, 'writeFileSync');
-        const renameSyncStub = sinon.stub(fs, 'renameSync');
-        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+            await perform(ctx);
 
-        await perform(ctx);
-
-        assert.ok(renameSyncStub.called, 'files should be moved into ATOM dirs');
-        assert.ok(infoStub.calledOnce, 'success message should be shown');
+            assert.ok(ctx.exec.calledOnce);
+            const [command, cwd] = ctx.exec.firstCall.args;
+            assert.ok(command.includes('--atom=my_atom'), 'command should target the ATOM by name');
+            assert.strictEqual(cwd, FAKE_ROOT, 'still runs from the app root — the generator resolves ATOM placement itself');
+            assert.ok(ctx.check.hasGemspec.called, 'gemspec guard should run for ATOM context');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+        });
     });
 });

@@ -23,7 +23,7 @@ What a Dual-context Command generates code into: the owning ATOM when invoked fr
 _Avoid_: context (collides with VS Code's "context menu" and `ExecutionContext`)
 
 **Dual-context Command**:
-An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action.
+An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action. Add a Model / Add a DB Migration only use the resolved Target to pick the `rails g` invocation's `--atom=<name>` flag (or omit it for the Main App) and to run their pre-flight guard checks — actual file placement is delegated to the `thecore_generators` Rails generator hook, not performed by the extension itself. Add a Root Action / Add a Member Action still template and move files into the Target themselves.
 _Avoid_: ATOM command, app command
 
 **Action Companions**:
