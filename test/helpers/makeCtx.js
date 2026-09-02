@@ -79,6 +79,7 @@ function makeCtx(overrides = {}) {
             isDir: sinon.stub().returns({ ok: true }),
             isFile: sinon.stub().returns({ ok: false }),
             hasGemspec: sinon.stub().returns({ ok: true, value: `${ATOM_DIR}/my_atom.gemspec` }),
+            hasThecoreGenerators: sinon.stub().returns({ ok: true, value: `${FAKE_ROOT}/Gemfile` }),
         },
         write: {
             textFile: sinon.stub(),

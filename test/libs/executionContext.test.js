@@ -153,6 +153,33 @@ describe('libs/executionContext — CheckContext', () => {
         });
     });
 
+    describe('check.hasThecoreGenerators()', () => {
+        it('returns ok:true when the Gemfile contains the gem', () => {
+            sinon.stub(fs, 'existsSync').returns(true);
+            sinon.stub(fs, 'readFileSync').returns('gem "thecore_generators", "~> 3.2"');
+            const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+            const result = ctx.check.hasThecoreGenerators('/fake/workspace/Gemfile');
+            assert.ok(result.ok);
+            assert.strictEqual(result.value, '/fake/workspace/Gemfile');
+        });
+
+        it('returns ok:false when the Gemfile lacks the gem', () => {
+            sinon.stub(fs, 'existsSync').returns(true);
+            sinon.stub(fs, 'readFileSync').returns('gem "rails"');
+            const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+            const result = ctx.check.hasThecoreGenerators('/fake/workspace/Gemfile');
+            assert.strictEqual(result.ok, false);
+            assert.ok(result.message.includes('thecore_generators'));
+        });
+
+        it('returns ok:false when the Gemfile does not exist', () => {
+            sinon.stub(fs, 'existsSync').returns(false);
+            const ctx = new execCtxModule.ExecutionContext('Test', undefined);
+            const result = ctx.check.hasThecoreGenerators('/fake/workspace/Gemfile');
+            assert.strictEqual(result.ok, false);
+        });
+    });
+
     describe('workspace', () => {
         it('is AppContext rooted at the workspace when no folder provided (command palette)', () => {
             const ctx = new execCtxModule.ExecutionContext('Test', undefined);

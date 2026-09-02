@@ -41,6 +41,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) t
 │   ├── helpers.js            # Case conversion: snakeToClassName, railsStyleKey
 │   ├── os.js                 # Shell execution (execShell) and mkdir (mkDirP)
 │   ├── templates.js          # Template rendering with {{key}} substitution
+│   ├── thecoreGeneratorsGuard.js # Confirm-and-fix flow for the thecore_generators Gemfile guard
 │   └── workspaceContext.js   # ATOMContext / AppContext factory
 ├── templates/                # Static template files used by commands
 │   ├── addMemberAction/      # action.rb, action.js, action.html.erb
@@ -101,6 +102,24 @@ Both flags on the shelled-out command matter and are always passed together:
 
 `ctx.workspace` (from `libs/workspaceContext.js`) is still used here — for the guard checks (`hasGemspec`/`railsAppValid`) and to read `atomName` for the `--atom=` flag — but it is no longer used to *decide where generated files end up*; that placement decision now lives entirely in `thecore_generators`. `libs/workspaceContext.js`'s detection logic remains load-bearing for `addRootAction`/`addMemberAction`/`createATOM`, which still do their own file placement and haven't been ported to a `thecore_generators` equivalent yet.
 
+#### `thecore_generators` Gemfile guard
+
+Because `addModel`/`addMigration` now trust `rails generate` completely, a host app whose `Gemfile` doesn't actually depend on `thecore_generators` gets a **silent** regression: plain `rails g model`/`migration` still runs and still exits 0, but with none of the ATOM-aware placement, default-first concerns, or inverse-association wiring described above — there is no error, no warning, nothing to indicate anything went wrong. Both commands guard against this after their existing context guard checks (`hasGemspec`/`railsAppValid`) but *before* collecting the model/migration name and definition, so a dismissed prompt doesn't waste typing:
+
+```js
+const gemfilePath = path.join(ctx.workspace.appRoot(), 'Gemfile');
+if (!ctx.check.hasThecoreGenerators(gemfilePath).ok) {
+    if (!(await confirmAndAddThecoreGenerators(ctx, gemfilePath))) return;
+}
+```
+
+- **`ctx.check.hasThecoreGenerators(gemfilePath)`** (`CheckContext`, in `libs/executionContext.js`) reads the Gemfile (treating a missing file as empty content) and delegates the actual detection to the pure `check.hasThecoreGenerators(gemfileContent)` predicate in `libs/check.js` — a tolerant regex (`/gem\s+['"]thecore_generators['"]/`) that matches regardless of quote style, version constraint, or whether the line sits bare or inside a `group` block.
+- On a failed check, `confirmAndAddThecoreGenerators(ctx, gemfilePath)` (`libs/thecoreGeneratorsGuard.js`) shows a `vscode.window.showWarningMessage` explaining the silent-fallback risk, with a single **"Add & Bundle Install"** action button.
+  - **Dismissed/cancelled** (any response other than that exact button, including pressing Escape) — the function returns `false`, both commands `return` immediately, and `rails generate` never runs.
+  - **Confirmed** — it patches the Gemfile via `insertGemIntoDevelopmentGroup` (`libs/configs.js`, a pure content transform — see below), adding `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block (reusing one if the Gemfile already has a bare `group :development do` block — Rails' own default Gemfile ships one, e.g. for `web-console` — or creating a fresh one otherwise; it deliberately does **not** reuse a `group :development, :test do` block, since that would also load the gem in the test env), runs `bundle install` via `ctx.exec`, and returns `true` so the caller proceeds with the original `rails g` command.
+
+Regression check: a workspace whose Gemfile already has `thecore_generators` never triggers the warning at all — `ctx.check.hasThecoreGenerators` is `ok: true` and both commands proceed exactly as before this guard existed.
+
 ---
 
 ## Key Libraries
@@ -111,7 +130,7 @@ The central deep module. Commands receive a single `ExecutionContext ctx` that o
 
 - **`ctx.workspace`** — `ATOMContext | AppContext | null` from `workspaceContext.from(folder)`
 - **`ctx.check`** — `CheckContext` instance with methods returning `{ ok, value?, message? }`:
-  - `workspaceExists()`, `workspaceEmpty()`, `railsAppValid(hideError?)`, `fileExists(path)`, `commandExists(cmd)`, `isDir(path)`, `isFile(path)`, `hasGemspec(atomDir, atomName)`
+  - `workspaceExists()`, `workspaceEmpty()`, `railsAppValid(hideError?)`, `fileExists(path)`, `commandExists(cmd)`, `isDir(path)`, `isFile(path)`, `hasGemspec(atomDir, atomName)`, `hasThecoreGenerators(gemfilePath)`
 - **`ctx.write`** — `WriteContext` instance with methods that log and write files:
   - `textFile(dir, name, content)`, `yamlFile(dir, name, obj)`, `jsonFile(dir, name, obj)`, `gitignoreFile(dir)`, `mergeYaml(dir, file, action, titleCase, rootEl)`
 - **`ctx.log(msg)`** / **`ctx.show()`** — output channel helpers
@@ -159,12 +178,20 @@ Pure validation predicates — **no `outputChannel` parameter**. Return values o
 - `isDir(path)` / `isFile(path)` — type checks
 - `hasUnreplacedTokens(content)` — returns `true` if `content` still contains `{{...}}` template placeholders
 - `hasSkeletonMarker(content, marker)` — returns `true` if `content` includes the expected structural marker string
+- `hasThecoreGenerators(gemfileContent)` — returns `true` if `gemfileContent` contains a `thecore_generators` gem line (tolerant of quote style, version constraint, and `group` block nesting)
 
 ### `libs/configs.js`
 
 Pure file I/O helpers — **no `outputChannel` parameter**. Write files; callers handle logging.
 
 - `writeJSONFile(dir, file, obj)`, `writeYAMLFile(dir, file, obj)`, `writeTextFile(dir, file, content)`, `createGitignoreFile(dir)`, `mergeYmlContent(ymlDir, file, action, titleCase, root)`
+- `insertGemIntoDevelopmentGroup(gemfileContent, gemLine)` — pure content transform (no fs I/O); inserts `gemLine` into an existing bare `group :development do ... end` block or creates one at the end of the file. Used by `createApp.js` and `libs/thecoreGeneratorsGuard.js` to add `thecore_generators` as a dev-only dependency.
+
+### `libs/thecoreGeneratorsGuard.js`
+
+- `confirmAndAddThecoreGenerators(ctx, gemfilePath)` — the interactive confirm-and-fix flow described above; shows the warning, and on confirmation patches the Gemfile and runs `bundle install`. Returns a `Promise<boolean>` indicating whether the caller should proceed.
+- `GEM_LINE` — the exact gem line added: `gem "thecore_generators", "~> 3.2"`.
+- `ACTION_LABEL` — the warning dialog's action button text (`"Add & Bundle Install"`).
 
 ### `libs/helpers.js`
 

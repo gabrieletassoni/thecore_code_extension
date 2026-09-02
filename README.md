@@ -25,7 +25,7 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 | Command | Title | Description |
 |---|---|---|
 | `thecore.setupDevcontainer` | Thecore 3: Setup Devcontainer | Creates the `.devcontainer` configuration (Dockerfile, docker-compose) for the current workspace. |
-| `thecore.createApp` | Thecore 3: Create an App | Scaffolds a new Thecore 3 Rails application with all required dependencies and folder structure. |
+| `thecore.createApp` | Thecore 3: Create an App | Scaffolds a new Thecore 3 Rails application with all required dependencies and folder structure, including [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) (added inside a `group :development do ... end` block in the generated `Gemfile` — see [Model / Migration generation](#model--migration-generation)). |
 | `thecore.createATOM` | Thecore 3: Create an ATOM | Creates a new Rails engine (ATOM) as a reusable, self-contained submodule. |
 
 ### Main application and ATOM context
@@ -69,6 +69,17 @@ All of that is handled by the [`thecore_generators`](https://github.com/gabriele
 - Wire the inverse `has_many`/`has_one` side of any `references` attribute into the target model automatically.
 
 See `thecore_generators`' own README and the `docs/adr/` in the [`thecore`](https://github.com/gabrieletassoni/thecore) repo for the full behavior.
+
+### Missing `thecore_generators` guard
+
+Since `addModel`/`addMigration` fully trust `rails generate`, a Gemfile that doesn't actually depend on `thecore_generators` would otherwise fail silently: plain Rails generators still run and still succeed, just without any ATOM-aware placement, default-first concerns, or inverse-association wiring, with no error or warning of any kind. Both commands now check for `thecore_generators` in the workspace's `Gemfile` before shelling out:
+
+- **Present** — no change in behavior; the command proceeds exactly as described above.
+- **Missing** — a warning is shown explaining the risk, with an **"Add & Bundle Install"** action button.
+  - Clicking it adds `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block in the `Gemfile` (reusing one if the Gemfile already has a bare `group :development do` block, creating one otherwise), runs `bundle install`, and then proceeds with the original `rails g model`/`migration` invocation.
+  - Dismissing or cancelling the warning aborts the command entirely — `rails generate` is never invoked.
+
+`thecore.createApp` adds `thecore_generators` to a new app's `Gemfile` automatically (same `group :development` block), so freshly-created Thecore 3 apps never hit this guard.
 
 ## Requirements
 
