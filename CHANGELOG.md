@@ -14,6 +14,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - `templates/setupDevContainer/devcontainer.json` — `postCreateCommand` now self-heals `/usr/local/bundle` ownership before bundling and runs `npx skills update --project --yes`, matching the convention adopted across host apps
 - `templates/setupDevContainer/backend.code-workspace` — associate `Gemfile.base` (not `Gemfile`) with the `gemfile` language, matching the file the generated devcontainer actually formats
 - `commands/createApp.js` — generated `.gitlab-ci.yml` now gates `build`/`to-dev`/`to-prod` on `only: changes: [version]` (skipping tag pipelines) instead of running on every commit, matching the convention adopted across host apps
+- `commands/addModel.js`/`commands/addMigration.js` — now thin wrappers delegating to the `thecore_generators` gem's `rails g model`/`rails g migration` hook: no more templating `Api::`/`RailsAdmin::`/`Endpoints::` concern files, patching `include` lines into the model, parsing `rails g` stdout to relocate files, or `fs.renameSync` ATOM relocation for migrations. `addModel.js` no longer passes `--skip-test-framework`. Both now pass `--atom=<name>` (ATOM context only) and `--non-interactive` to the shelled-out command instead (closes #32)
+
+### Removed
+- `templates/addModel/api_concern.rb`, `rails_admin_concern.rb`, `endpoints_concern.rb` — no longer rendered; `thecore_generators` supplies the equivalent starter files behind `--with-api-concern`/`--with-admin-concern` when a `rails g model` invocation needs them
 
 ## [3.1.8]
 

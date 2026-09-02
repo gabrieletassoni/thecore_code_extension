@@ -1,8 +1,6 @@
 'use strict';
 
 const vscode = require('vscode');
-const fs = require('fs');
-const path = require('path');
 const { isPascalCase } = require('../libs/check');
 const { CommandRunner } = require('../libs/commandRunner');
 
@@ -47,10 +45,17 @@ async function perform(ctx) {
             optional: true,
         });
 
-        const output = await ctx.exec(
-            `bundle install && rails g migration "${migrationName}" ${migrationDefinition || ''}`,
-            ctx.workspace.appRoot()
-        );
+        // thecore_generators registers `config.app_generators.orm :thecore` (see
+        // docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md in the thecore
+        // repo), so plain `rails g migration` now places the migration file in the right ATOM/
+        // host-app db/migrate itself — this command's only remaining job is to shell out and
+        // trust it, no more `fs.renameSync` relocation step.
+        //
+        // See addModel.js for the `--atom=<name>`/`--non-interactive` rationale — identical here.
+        const atomFlag = isAtom ? ` --atom=${ctx.workspace.atomName}` : '';
+        const command = `bundle install && rails g migration "${migrationName}" ${migrationDefinition || ''}${atomFlag} --non-interactive`;
+
+        const output = await ctx.exec(command, ctx.workspace.appRoot());
 
         if (!output) {
             const msg = 'No output from rails g command exists, cannot go on';
@@ -58,31 +63,6 @@ async function perform(ctx) {
             vscode.window.showErrorMessage(`${msg}, please inspect the output window.`);
             return;
         }
-
-        const migrationFiles = [...output.matchAll(/^\s+create\s+(db\/migrate\/.+\.rb)$/gm)];
-
-        if (!migrationFiles.length) {
-            const msg = 'No output from rails g command matches evidence of migration file creation, cannot go on';
-            ctx.log(`❌ ${msg}, please inspect lines above.`);
-            vscode.window.showErrorMessage(`${msg}, please inspect output window.`);
-            return;
-        }
-
-        migrationFiles.forEach(el => {
-            const srcPath = path.join(ctx.workspace.appRoot(), el[1]);
-            if (isAtom) {
-                const targetDir = ctx.workspace.migrationDir();
-                if (!fs.existsSync(targetDir)) {
-                    ctx.log(`📁 Creating the migrations folder: ${targetDir}`);
-                    ctx.mkdir(targetDir);
-                }
-                ctx.log(`📄 Moving the migration file to the migrations folder: ${srcPath}`);
-                fs.renameSync(srcPath, path.join(targetDir, path.basename(srcPath)));
-            } else {
-                // In the main app the migration is already in db/migrate — no move needed.
-                ctx.log(`📄 Migration created at: ${srcPath}`);
-            }
-        });
 
         ctx.log(`✅ The migration ${migrationName} has been added successfully.`);
         vscode.window.showInformationMessage(`The migration ${migrationName} has been added successfully.`);

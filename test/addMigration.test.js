@@ -2,10 +2,9 @@
 
 const assert = require('assert');
 const sinon = require('sinon');
-const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addMigration');
-const { makeCtx, makeAtomWorkspace, makeAppWorkspace } = require('./helpers/makeCtx');
+const { makeCtx, makeAtomWorkspace, makeAppWorkspace, FAKE_ROOT } = require('./helpers/makeCtx');
 
 describe('commands/addMigration', () => {
     afterEach(() => sinon.restore());
@@ -40,6 +39,7 @@ describe('commands/addMigration', () => {
         const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
         await perform(ctx);
         assert.ok(!infoStub.called);
+        assert.ok(!ctx.exec.called, 'should not exec when name input is cancelled');
     });
 
     it('shows an error when execShell produces no output', async () => {
@@ -65,14 +65,11 @@ describe('commands/addMigration', () => {
     });
 
     it('accepts an empty optional migration definition and still runs rails g', async () => {
-        const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
         const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves(migrationOutput);
+        ctx.exec.resolves('      create  db/migrate/20240101000000_add_name_to_users.rb\n');
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('AddNameToUsers')
             .onSecondCall().resolves(''); // empty optional definition
-        sinon.stub(fs, 'existsSync').returns(false);
-        sinon.stub(fs, 'renameSync');
         sinon.stub(vscode.window, 'showInformationMessage');
 
         await perform(ctx);
@@ -81,9 +78,9 @@ describe('commands/addMigration', () => {
         assert.ok(ctx.exec.firstCall.args[0].includes('rails g migration'), 'command should include rails g migration');
     });
 
-    it('shows an error when rails g output has no migration file lines', async () => {
+    it('shows an error when an exec failure throws inside the try block', async () => {
         const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves('some output with no create lines');
+        ctx.exec.rejects(new Error('rename failed'));
         sinon.stub(vscode.window, 'showInputBox')
             .onFirstCall().resolves('AddNameToUsers')
             .onSecondCall().resolves('');
@@ -91,73 +88,32 @@ describe('commands/addMigration', () => {
 
         await perform(ctx);
 
-        assert.ok(errorStub.calledOnce, 'error should be shown when output has no migration create lines');
-    });
-
-    it('creates the migration target directory when it does not exist', async () => {
-        const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
-        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves(migrationOutput);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('AddNameToUsers')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'existsSync').returns(false); // migration dir doesn't exist
-        sinon.stub(fs, 'renameSync');
-        sinon.stub(vscode.window, 'showInformationMessage');
-
-        await perform(ctx);
-
-        assert.ok(ctx.mkdir.calledOnce, 'mkdir should be called when migration dir is missing');
-    });
-
-    it('skips mkdir when the migration target directory already exists', async () => {
-        const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
-        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves(migrationOutput);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('AddNameToUsers')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'existsSync').returns(true); // migration dir already exists
-        sinon.stub(fs, 'renameSync');
-        sinon.stub(vscode.window, 'showInformationMessage');
-
-        await perform(ctx);
-
-        assert.ok(!ctx.mkdir.called, 'mkdir should not be called when migration dir already exists');
-    });
-
-    it('shows an error when an fs operation throws inside the try block', async () => {
-        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves('      create  db/migrate/20240101000000_test.rb\n');
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('AddNameToUsers')
-            .onSecondCall().resolves('');
-        sinon.stub(fs, 'existsSync').returns(false);
-        sinon.stub(fs, 'renameSync').throws(new Error('rename failed'));
-        const errorStub = sinon.stub(vscode.window, 'showErrorMessage');
-
-        await perform(ctx);
-
-        assert.ok(errorStub.calledOnce, 'error should be shown on fs failure');
+        assert.ok(errorStub.calledOnce, 'error should be shown on exec failure');
         assert.ok(errorStub.firstCall.args[0].includes('rename failed'));
     });
 
-    it('moves migration files to the ATOM db/migrate folder on success', async () => {
-        const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
-        const ctx = makeCtx({ workspace: makeAtomWorkspace() });
-        ctx.exec.resolves(migrationOutput);
-        sinon.stub(vscode.window, 'showInputBox')
-            .onFirstCall().resolves('AddNameToUsers')
-            .onSecondCall().resolves('name:string');
-        sinon.stub(fs, 'existsSync').returns(false);
-        const renameSyncStub = sinon.stub(fs, 'renameSync');
-        const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+    describe('ATOM context', () => {
+        it('passes --atom=<name>, runs from the app root, and trusts the result without moving any files', async () => {
+            const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+            ctx.exec.resolves('      create  db/migrate/20240101000000_add_name_to_users.rb\n');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('AddNameToUsers')
+                .onSecondCall().resolves('name:string');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
-        await perform(ctx);
+            await perform(ctx);
 
-        assert.ok(renameSyncStub.calledOnce, 'migration file should be moved');
-        assert.ok(infoStub.calledOnce, 'success message should be shown');
-        assert.ok(infoStub.firstCall.args[0].includes('AddNameToUsers'));
+            assert.ok(ctx.exec.calledOnce);
+            const [command, cwd] = ctx.exec.firstCall.args;
+            assert.ok(command.includes('rails g migration "AddNameToUsers" name:string'), 'command should invoke rails g migration with the given name/definition');
+            assert.ok(command.includes('--atom=my_atom'), 'command should target the ATOM by name');
+            assert.ok(command.includes('--non-interactive'), 'command should skip the interactive association prompt');
+            assert.strictEqual(cwd, FAKE_ROOT, 'still runs from the app root — the generator resolves ATOM placement itself');
+            assert.ok(ctx.check.hasGemspec.called, 'gemspec guard should run for ATOM context');
+            assert.ok(!ctx.mkdir.called, 'no ATOM migration folder should be created by this command anymore');
+            assert.ok(infoStub.calledOnce, 'success message should be shown');
+            assert.ok(infoStub.firstCall.args[0].includes('AddNameToUsers'));
+        });
     });
 
     describe('main app context', () => {
@@ -174,21 +130,21 @@ describe('commands/addMigration', () => {
             assert.ok(!ctx.exec.called, 'rails g should not run when the guard fails');
         });
 
-        it('leaves the migration in db/migrate without moving it', async () => {
-            const migrationOutput = '      create  db/migrate/20240101000000_add_name_to_users.rb\n';
+        it('shells out to `rails g migration` in the app root with no --atom flag', async () => {
             const ctx = makeCtx({ workspace: makeAppWorkspace() });
-            ctx.exec.resolves(migrationOutput);
+            ctx.exec.resolves('      create  db/migrate/20240101000000_add_name_to_users.rb\n');
             sinon.stub(vscode.window, 'showInputBox')
                 .onFirstCall().resolves('AddNameToUsers')
                 .onSecondCall().resolves('name:string');
-            const renameSyncStub = sinon.stub(fs, 'renameSync');
             const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
 
             await perform(ctx);
 
             assert.ok(ctx.check.railsAppValid.called, 'the Rails app guard should run');
             assert.ok(!ctx.check.hasGemspec.called, 'gemspec check must not run for the main app');
-            assert.ok(!renameSyncStub.called, 'migration must stay in the main app db/migrate');
+            const [command, cwd] = ctx.exec.firstCall.args;
+            assert.ok(!command.includes('--atom'), 'no --atom flag should be passed outside ATOM context');
+            assert.strictEqual(cwd, FAKE_ROOT, 'should run from the app root');
             assert.ok(!ctx.mkdir.called, 'no ATOM migration folder should be created');
             assert.ok(infoStub.calledOnce, 'success message should be shown');
         });

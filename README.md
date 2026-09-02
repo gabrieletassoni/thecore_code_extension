@@ -30,12 +30,12 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 
 ### Main application and ATOM context
 
-These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: in ATOM context they are moved into the ATOM, in main app context they remain in the standard Rails locations — except actions, which are generated into `config/root_actions` / `config/member_actions` so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
+These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: for `Add a Root Action` / `Add a Member Action` the extension itself moves them into the ATOM in ATOM context (or leaves them in the standard Rails locations in main app context); for `Add a Model` / `Add a DB Migration` the extension shells out to `rails g model`/`rails g migration` and the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) Rails generator hook places the files itself (see [Model / Migration generation](#model--migration-generation) below) — except actions, which are generated into `config/root_actions` / `config/member_actions` so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
 | Command | Title | Description |
 |---|---|---|
-| `thecore.addModel` | Thecore 3: Add a Model | Generates a Rails model with its migration and the standard Thecore concern structure (`Api`, `RailsAdmin`, `Endpoints`). |
-| `thecore.addMigration` | Thecore 3: Add a DB Migration | Creates a new database migration. |
+| `thecore.addModel` | Thecore 3: Add a Model | Runs `rails g model`, delegating scaffolding (placement, concerns, tests) to `thecore_generators`. |
+| `thecore.addMigration` | Thecore 3: Add a DB Migration | Runs `rails g migration`, delegating placement to `thecore_generators`. |
 | `thecore.addRootAction` | Thecore 3: Add a Root Action | Generates a root-level action for the `rails_admin` backend UI (dashboard-style main menu section), including controller, view, assets, and i18n entries. |
 | `thecore.addMemberAction` | Thecore 3: Add a Member Action | Generates a member-level action for the `rails_admin` backend UI (per-row button in model list views), including controller, view, assets, and i18n entries. |
 | `thecore.checkPractices` | Thecore 3: Check Practices | Audits the target (ATOM or main app) for Thecore structural conventions. Reports missing scaffold files, incomplete action companions, and model concern violations as VS Code diagnostics. Offers to auto-fix resolvable issues. |
@@ -57,22 +57,18 @@ These commands appear when right-clicking on any folder. Right-clicking on an AT
 
 > Note: when invoked from the Command Palette there is no clicked folder, so commands that work in both contexts (`Add a Model`, `Add a DB Migration`, `Add a Root Action`, `Add a Member Action`) run against the **main application**. To target an ATOM, use the explorer context menu on the ATOM folder.
 
-## Model structure
+## Model / Migration generation
 
-When `Add a Model` is run, the extension:
+`Add a Model` and `Add a DB Migration` are thin wrappers: the extension collects the name and attribute definition, then shells out to `bundle install && rails g model|migration "<Name>" <definition> [--atom=<name>] --non-interactive` from the main application root and trusts the result — it does not template any files, parse the command's output, move anything, or edit the generated model file itself.
 
-1. Runs `rails g model` to generate the migration and the base model file.
-2. In **ATOM context**: moves the generated files into the ATOM's `db/migrate/` and `app/models/` directories.
-   In **main app context**: files remain in the standard Rails locations.
-3. Creates the following concern files:
+All of that is handled by the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) gem, which every Thecore 3 app depends on. It hooks Rails' own generators (`config.app_generators.orm :thecore`) so plain `rails g model`/`rails g migration` already:
 
-| File | Module | Purpose |
-|---|---|---|
-| `app/models/concerns/api/<model>.rb` | `Api::<Model>` | Controls JSON serialization via `ModelDrivenApi.smart_merge` |
-| `app/models/concerns/rails_admin/<model>.rb` | `RailsAdmin::<Model>` | Configures the `rails_admin` UI (navigation label, icon) |
-| `app/models/concerns/endpoints/<model>.rb` | `Endpoints::<Model>` | Defines custom non-CRUD API endpoints (OpenAPI/Swagger documented) |
+- Place the migration/model files in the right ATOM (`--atom=<name>`, passed by the extension in ATOM context) or in the main app.
+- Generate real test files (no `--skip-test-framework`).
+- Skip the `Api::`/`RailsAdmin::`/`Endpoints::` concern trio by default — those now come from framework-wide defaults on `ApplicationRecord` instead. Pass `--with-api-concern`/`--with-admin-concern` to a `rails g model` invocation directly (outside the extension) to scaffold a starter concern when customization is already known to be needed.
+- Wire the inverse `has_many`/`has_one` side of any `references` attribute into the target model automatically.
 
-4. Adds `include Api::<Model>` and `include RailsAdmin::<Model>` to the generated model class.
+See `thecore_generators`' own README and the `docs/adr/` in the [`thecore`](https://github.com/gabrieletassoni/thecore) repo for the full behavior.
 
 ## Requirements
 
