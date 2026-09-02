@@ -1,8 +1,10 @@
 'use strict';
 
 const vscode = require('vscode');
+const path = require('path');
 const { isPascalCase } = require('../libs/check');
 const { CommandRunner } = require('../libs/commandRunner');
+const { confirmAndAddThecoreGenerators } = require('../libs/thecoreGeneratorsGuard');
 
 async function perform(ctx) {
     if (!ctx.workspace) {
@@ -31,6 +33,14 @@ async function perform(ctx) {
             ctx.log('Adding a migration to the main app.');
             ctx.log('🔍 Checking if the workspace root is a valid Ruby on Rails app.');
             if (!runner.check(ctx.check.railsAppValid(), showErr)) return;
+        }
+
+        // thecore_generators must be present for plain `rails g migration` to be Thecore-aware
+        // at all (see the comment further down) — check before collecting any input so a
+        // dismissed prompt doesn't waste the user's typing.
+        const gemfilePath = path.join(ctx.workspace.appRoot(), 'Gemfile');
+        if (!ctx.check.hasThecoreGenerators(gemfilePath).ok) {
+            if (!(await confirmAndAddThecoreGenerators(ctx, gemfilePath))) return;
         }
 
         const migrationName = await runner.input({

@@ -2,6 +2,8 @@
 
 const assert = require('assert');
 const sinon = require('sinon');
+const path = require('path');
+const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addMigration');
 const { makeCtx, makeAtomWorkspace, makeAppWorkspace, FAKE_ROOT } = require('./helpers/makeCtx');
@@ -90,6 +92,62 @@ describe('commands/addMigration', () => {
 
         assert.ok(errorStub.calledOnce, 'error should be shown on exec failure');
         assert.ok(errorStub.firstCall.args[0].includes('rename failed'));
+    });
+
+    describe('thecore_generators guard', () => {
+        it('shows a warning and does not run rails g when thecore_generators is missing and the prompt is dismissed', async () => {
+            const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+            ctx.check.hasThecoreGenerators.returns({ ok: false, message: 'missing' });
+            const warnStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined);
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(warnStub.calledOnce, 'a warning should be shown');
+            assert.ok(!ctx.exec.called, 'rails g / bundle install should never run when dismissed');
+            assert.ok(!infoStub.called);
+        });
+
+        it('patches the Gemfile, runs bundle install, then proceeds with rails g when the prompt is confirmed', async () => {
+            const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+            ctx.check.hasThecoreGenerators.returns({ ok: false, message: 'missing' });
+            sinon.stub(vscode.window, 'showWarningMessage').resolves('Add & Bundle Install');
+            sinon.stub(fs, 'existsSync').returns(true);
+            sinon.stub(fs, 'readFileSync').returns('# Gemfile\n');
+            const writeStub = sinon.stub(fs, 'writeFileSync');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('AddNameToUsers')
+                .onSecondCall().resolves('name:string');
+            ctx.exec.onFirstCall().resolves('bundled');
+            ctx.exec.onSecondCall().resolves('      create  db/migrate/20240101000000_add_name_to_users.rb\n');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(writeStub.calledOnce, 'the Gemfile should be patched');
+            assert.ok(writeStub.firstCall.args[1].includes('thecore_generators'));
+            assert.strictEqual(ctx.exec.callCount, 2, 'bundle install then rails g should both run');
+            assert.ok(ctx.exec.firstCall.args[0].includes('bundle install'));
+            assert.strictEqual(ctx.exec.firstCall.args[1], FAKE_ROOT);
+            assert.ok(ctx.exec.secondCall.args[0].includes('rails g migration "AddNameToUsers"'));
+            assert.ok(infoStub.calledOnce, 'the migration creation should still succeed afterwards');
+        });
+
+        it('does not show a warning when thecore_generators is already present (regression)', async () => {
+            const ctx = makeCtx({ workspace: makeAtomWorkspace() });
+            ctx.check.hasThecoreGenerators.returns({ ok: true, value: path.join(FAKE_ROOT, 'Gemfile') });
+            const warnStub = sinon.stub(vscode.window, 'showWarningMessage');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('AddNameToUsers')
+                .onSecondCall().resolves('name:string');
+            ctx.exec.resolves('      create  db/migrate/20240101000000_add_name_to_users.rb\n');
+            sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(!warnStub.called, 'no warning should appear when the gem is already present');
+            assert.ok(ctx.exec.calledOnce, 'only the rails g command should run, no extra bundle install');
+        });
     });
 
     describe('ATOM context', () => {

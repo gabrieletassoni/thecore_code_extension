@@ -49,3 +49,7 @@ _Avoid_: auto-fix (alone), suggestion
 **Skeleton Marker**:
 A string that must be present in a generated file as structural evidence that the file was produced from the correct Thecore template (e.g. `RailsAdmin::Config::Actions.add_action`, `Rails.application.configure do`). Checked by `hasSkeletonMarker(content, marker)` in `libs/check.js`.
 _Avoid_: landmark, anchor
+
+**Thecore Generators Guard**:
+The pre-flight check `addModel`/`addMigration` run against the Target's `Gemfile` before shelling out to `rails generate`, verifying it depends on `thecore_generators` — without which `rails generate` still succeeds but silently skips all Thecore-aware behavior (ATOM placement, default-first concerns, inverse-association wiring). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
+_Avoid_: gem check (too generic), dependency check

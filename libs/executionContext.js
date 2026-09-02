@@ -1,6 +1,7 @@
 'use strict';
 
 const vscode = require('vscode');
+const fs = require('fs');
 const check = require('./check');
 const configs = require('./configs');
 const { execShell, mkDirP } = require('./os');
@@ -67,6 +68,17 @@ class CheckContext {
             return { ok: false, message: 'Cannot find a valid gemspec file. Please select a Thecore 3 ATOM and try again.' };
         }
         return { ok: true, value: result };
+    }
+
+    hasThecoreGenerators(gemfilePath) {
+        const content = fs.existsSync(gemfilePath) ? fs.readFileSync(gemfilePath, 'utf8') : '';
+        if (!check.hasThecoreGenerators(content)) {
+            return {
+                ok: false,
+                message: 'thecore_generators is missing from this app\'s Gemfile.',
+            };
+        }
+        return { ok: true, value: gemfilePath };
     }
 }
 

@@ -4,6 +4,8 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { CommandRunner } = require('../libs/commandRunner');
+const { insertGemIntoDevelopmentGroup } = require('../libs/configs');
+const { GEM_LINE: THECORE_GENERATORS_GEM_LINE } = require('../libs/thecoreGeneratorsGuard');
 
 async function perform(ctx) {
     ctx.show();
@@ -37,7 +39,16 @@ async function perform(ctx) {
 
         const gemfile = path.join(workspaceRoot, 'Gemfile');
         if (fs.existsSync(gemfile)) {
-            const gemfileContent = fs.readFileSync(gemfile, 'utf8');
+            // thecore_generators is dev-tooling only (it hooks `rails g model`/`migration`, see
+            // docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md in the thecore
+            // repo), never a runtime dependency — unlike model_driven_api/thecore_ui_rails_admin
+            // below, it must land inside a `group :development do ... end` block. `rails new`'s
+            // own default Gemfile already ships one (e.g. for `web-console`), so this reuses it
+            // instead of creating a redundant second block.
+            const gemfileContent = insertGemIntoDevelopmentGroup(
+                fs.readFileSync(gemfile, 'utf8'),
+                THECORE_GENERATORS_GEM_LINE
+            );
             const gemDependencies = [
                 "gem 'rails-erd', group: :development",
                 "gem 'ruby-lsp', require: false, group: :development",

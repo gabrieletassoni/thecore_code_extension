@@ -12,6 +12,7 @@ const {
     writeTextFile,
     createGitignoreFile,
     mergeYmlContent,
+    insertGemIntoDevelopmentGroup,
 } = require('../../libs/configs');
 
 const LOCALES_DIR = path.resolve(__dirname, '../samples/atom/config/locales');
@@ -125,6 +126,55 @@ describe('libs/configs', () => {
             const parsed = yaml.load(written);
             assert.ok(parsed && parsed.it);
             assert.strictEqual(parsed.it.admin.actions.azione.title, 'Azione');
+        });
+    });
+
+    // ── insertGemIntoDevelopmentGroup ─────────────────────────────────────────
+
+    describe('insertGemIntoDevelopmentGroup', () => {
+        const GEM_LINE = 'gem "thecore_generators", "~> 3.2"';
+
+        it('creates a new group :development block when none exists', () => {
+            const result = insertGemIntoDevelopmentGroup('# Gemfile\n', GEM_LINE);
+            assert.ok(result.includes('group :development do'));
+            assert.ok(result.includes(`  ${GEM_LINE}`));
+            assert.ok(result.includes('\nend'));
+        });
+
+        it('reuses an existing bare group :development block, appending the gem inside it', () => {
+            const gemfile = [
+                'source "https://rubygems.org"',
+                'gem "rails"',
+                '',
+                'group :development do',
+                '  gem "web-console"',
+                'end',
+                ''
+            ].join('\n');
+            const result = insertGemIntoDevelopmentGroup(gemfile, GEM_LINE);
+
+            // Only one group :development block should exist afterwards.
+            const blockCount = (result.match(/group :development do/g) || []).length;
+            assert.strictEqual(blockCount, 1, 'should not create a second block');
+            assert.ok(result.includes('gem "web-console"'), 'existing gem should be preserved');
+            assert.ok(result.includes(`  ${GEM_LINE}`), 'new gem should be inserted');
+
+            // The new gem line must appear before that block's `end`.
+            const blockStart = result.indexOf('group :development do');
+            const blockEnd = result.indexOf('\nend', blockStart);
+            const gemIndex = result.indexOf(GEM_LINE);
+            assert.ok(gemIndex > blockStart && gemIndex < blockEnd, 'gem line should be inside the block');
+        });
+
+        it('does not reuse a `group :development, :test do` block (test env must not get the gem)', () => {
+            const gemfile = 'group :development, :test do\n  gem "debug"\nend\n';
+            const result = insertGemIntoDevelopmentGroup(gemfile, GEM_LINE);
+
+            // A brand-new bare :development block should be appended, the :test one left untouched.
+            assert.ok(result.includes('group :development, :test do\n  gem "debug"\nend'));
+            const blockCount = (result.match(/group :development do/g) || []).length;
+            assert.strictEqual(blockCount, 1);
+            assert.ok(result.includes(`  ${GEM_LINE}`));
         });
     });
 });

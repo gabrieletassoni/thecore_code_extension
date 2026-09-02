@@ -18,6 +18,7 @@ const {
     isFile,
     hasUnreplacedTokens,
     hasSkeletonMarker,
+    hasThecoreGenerators,
 } = require('../../libs/check');
 
 const ATOM_DIR = path.resolve(__dirname, '../samples/atom');
@@ -229,6 +230,35 @@ describe('libs/check', () => {
 
         it('returns false when the path points to a directory', () => {
             assert.strictEqual(isFile(ATOM_DIR), false);
+        });
+    });
+
+    // ── hasThecoreGenerators ──────────────────────────────────────────────────
+
+    describe('hasThecoreGenerators', () => {
+        it('detects a bare double-quoted gem line', () => {
+            assert.strictEqual(hasThecoreGenerators('gem "thecore_generators", "~> 3.2"'), true);
+        });
+
+        it('detects a single-quoted gem line', () => {
+            assert.strictEqual(hasThecoreGenerators("gem 'thecore_generators', '~> 3.2'"), true);
+        });
+
+        it('detects a gem line with no version constraint', () => {
+            assert.strictEqual(hasThecoreGenerators('gem "thecore_generators"'), true);
+        });
+
+        it('detects the gem line inside a group block', () => {
+            const gemfile = 'source "https://rubygems.org"\n\ngroup :development do\n  gem "thecore_generators", "~> 3.2"\nend\n';
+            assert.strictEqual(hasThecoreGenerators(gemfile), true);
+        });
+
+        it('returns false when the gem is absent from the Gemfile', () => {
+            assert.strictEqual(hasThecoreGenerators('source "https://rubygems.org"\ngem "rails"\n'), false);
+        });
+
+        it('returns false for an empty Gemfile', () => {
+            assert.strictEqual(hasThecoreGenerators(''), false);
         });
     });
 });

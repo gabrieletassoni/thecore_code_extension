@@ -2,6 +2,8 @@
 
 const assert = require('assert');
 const sinon = require('sinon');
+const path = require('path');
+const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/addModel');
 const { makeCtx, makeAtomWorkspace, makeAppWorkspace, FAKE_ROOT } = require('./helpers/makeCtx');
@@ -117,6 +119,63 @@ describe('commands/addModel', () => {
             assert.ok(ctx.exec.calledOnce, 'should execute rails g even with empty definition');
             assert.ok(ctx.exec.firstCall.args[0].includes('rails g model'), 'command should include rails g model');
             assert.ok(infoStub.calledOnce, 'success message should be shown');
+        });
+    });
+
+    describe('thecore_generators guard', () => {
+        it('shows a warning and does not run rails g when thecore_generators is missing and the prompt is dismissed', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.check.hasThecoreGenerators.returns({ ok: false, message: 'missing' });
+            const warnStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined);
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(warnStub.calledOnce, 'a warning should be shown');
+            assert.ok(!ctx.exec.called, 'rails g / bundle install should never run when dismissed');
+            assert.ok(!infoStub.called);
+        });
+
+        it('patches the Gemfile, runs bundle install, then proceeds with rails g when the prompt is confirmed', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            ctx.check.hasThecoreGenerators.returns({ ok: false, message: 'missing' });
+            sinon.stub(vscode.window, 'showWarningMessage').resolves('Add & Bundle Install');
+            sinon.stub(fs, 'existsSync').returns(true);
+            sinon.stub(fs, 'readFileSync').returns('# Gemfile\n');
+            const writeStub = sinon.stub(fs, 'writeFileSync');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('MyModel')
+                .onSecondCall().resolves('name:string');
+            ctx.exec.onFirstCall().resolves('bundled');
+            ctx.exec.onSecondCall().resolves('      create  app/models/my_model.rb\n');
+            const infoStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(writeStub.calledOnce, 'the Gemfile should be patched');
+            assert.ok(writeStub.firstCall.args[1].includes('thecore_generators'));
+            assert.strictEqual(ctx.exec.callCount, 2, 'bundle install then rails g should both run');
+            assert.ok(ctx.exec.firstCall.args[0].includes('bundle install'));
+            assert.strictEqual(ctx.exec.firstCall.args[1], FAKE_ROOT);
+            assert.ok(ctx.exec.secondCall.args[0].includes('rails g model "MyModel"'));
+            assert.ok(infoStub.calledOnce, 'the model creation should still succeed afterwards');
+        });
+
+        it('does not show a warning when thecore_generators is already present (regression)', async () => {
+            const ctx = makeCtx({ workspace: makeAppWorkspace() });
+            // Default stub already returns { ok: true } — explicit for clarity.
+            ctx.check.hasThecoreGenerators.returns({ ok: true, value: path.join(FAKE_ROOT, 'Gemfile') });
+            const warnStub = sinon.stub(vscode.window, 'showWarningMessage');
+            sinon.stub(vscode.window, 'showInputBox')
+                .onFirstCall().resolves('MyModel')
+                .onSecondCall().resolves('name:string');
+            ctx.exec.resolves('      create  app/models/my_model.rb\n');
+            sinon.stub(vscode.window, 'showInformationMessage');
+
+            await perform(ctx);
+
+            assert.ok(!warnStub.called, 'no warning should appear when the gem is already present');
+            assert.ok(ctx.exec.calledOnce, 'only the rails g command should run, no extra bundle install');
         });
     });
 
