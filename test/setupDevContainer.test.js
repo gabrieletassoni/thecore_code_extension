@@ -134,4 +134,29 @@ describe('commands/setupDevContainer', () => {
         const parsed = parseJsonc(devcontainerCall[2]);
         assert.ok(parsed.postCreateCommand.includes('prune-deleted-skills.sh'));
     });
+
+    it('does not run a bare `bundle update --bundler` in postCreateCommand', async () => {
+        const ctx = makeCtx();
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        // A bare `bundle update --bundler` (no explicit version) always resolves to the
+        // newest version published to the gem source, prereleases included — it ignores
+        // whatever stable Bundler/RubyGems version was pinned into the image (see
+        // Dockerfile.dev/Dockerfile.deploy in thecore_devcontainer). That silently installs
+        // a prerelease Bundler (e.g. 4.1.0.beta1) into the project's own vendor/bundle,
+        // which then loads its own vendored copy of RubyGems' `uri` library alongside the
+        // system one and floods every subsequent `bundle` invocation with "already
+        // initialized constant Gem::URI::*" warnings.
+        const devcontainerCall = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
+        const parsed = parseJsonc(devcontainerCall[2]);
+        assert.ok(
+            !/bundle update\s+--bundler(?!\S)/.test(parsed.postCreateCommand),
+            'postCreateCommand should not run a bare `bundle update --bundler`'
+        );
+    });
 });

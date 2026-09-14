@@ -58,7 +58,7 @@
 		"ghcr.io/devcontainers-extra/features/apt-packages:1": { "packages": "graphviz" }
 	},
 
-	"postCreateCommand": "sudo chown -R vscode:vscode /usr/local/bundle && bundle update --bundler && bundle update && GITHUB_TOKEN=\"${localEnv:GITHUB_TOKEN}\" npx skills update --project --yes && prune-deleted-skills.sh",
+	"postCreateCommand": "sudo chown -R vscode:vscode /usr/local/bundle && bundle update --all && GITHUB_TOKEN=\"${localEnv:GITHUB_TOKEN}\" npx skills update --project --yes && prune-deleted-skills.sh",
 
 	// "mounts": [
 	// 	Uncomment only the lines below matching auth/config you already have set up on your host —
