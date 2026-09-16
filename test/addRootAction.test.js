@@ -66,6 +66,7 @@ describe('commands/addRootAction', () => {
         assert.ok(!ctx.exec.called, 'should not exec when the action already exists');
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('already exists'));
+        assert.ok(ctx.log.calledWithMatch('already exists'), 'the already-exists outcome should be logged to the output channel too');
     });
 
     it('returns early when the root action file already exists (ATOM context)', async () => {
@@ -82,6 +83,7 @@ describe('commands/addRootAction', () => {
         assert.ok(!ctx.exec.called, 'should not exec when the action already exists');
         assert.ok(errorStub.calledOnce);
         assert.ok(errorStub.firstCall.args[0].includes('already exists'));
+        assert.ok(ctx.log.calledWithMatch('already exists'), 'the already-exists outcome should be logged to the output channel too');
     });
 
     it('shows an error when execShell produces no output', async () => {

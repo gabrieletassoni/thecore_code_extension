@@ -1,10 +1,9 @@
 'use strict';
 
 const vscode = require('vscode');
-const fs = require('fs');
 const path = require('path');
-const { renderTemplate } = require('../libs/templates');
 const { CommandRunner } = require('../libs/commandRunner');
+const { confirmAndAddThecoreGenerators } = require('../libs/thecoreGeneratorsGuard');
 
 async function perform(ctx) {
     if (!ctx.workspace) {
@@ -21,6 +20,10 @@ async function perform(ctx) {
 
     const isAtom = ctx.workspace.type() === 'atom';
 
+    // Everything below runs inside try/catch, matching addMigration.js/addRootAction.js (not
+    // addModel.js — see CLAUDE.md's "try/catch scope" note): only the initial workspaceExists
+    // check sits outside it, since perform() is never awaited/caught by extension.js and real
+    // I/O starts as early as the thecore_generators guard below.
     try {
         if (isAtom) {
             ctx.log('Adding a member action to the current ATOM.');
@@ -28,13 +31,20 @@ async function perform(ctx) {
             ctx.log(`🔍 Checking if the right clicked folder is a valid Thecore 3 ATOM: ${atomDir}`);
 
             if (!runner.check(ctx.check.isDir(atomDir), showErr)) return;
-            if (!runner.check(ctx.check.isDir(ctx.workspace.memberActionsDir()), showErr)) return;
             if (!runner.check(ctx.check.hasGemspec(atomDir, ctx.workspace.atomName), showErr)) return;
         } else {
             ctx.log('Adding a member action to the main app.');
             ctx.log('🔍 Checking if the workspace root is a valid Ruby on Rails app.');
             if (!runner.check(ctx.check.railsAppValid(), showErr)) return;
-            ctx.mkdir(ctx.workspace.memberActionsDir());
+        }
+
+        // thecore_generators must be present for `rails g thecore:member_action` to exist at all
+        // (see the comment further down) — check before collecting any input so a dismissed
+        // prompt doesn't waste the user's typing. Same guard, same placement, as
+        // addModel.js/addMigration.js/addRootAction.js.
+        const gemfilePath = path.join(ctx.workspace.appRoot(), 'Gemfile');
+        if (!ctx.check.hasThecoreGenerators(gemfilePath).ok) {
+            if (!(await confirmAndAddThecoreGenerators(ctx, gemfilePath))) return;
         }
 
         const memberActionName = await runner.input({
@@ -47,73 +57,33 @@ async function perform(ctx) {
         }
 
         const memberActionFile = path.join(ctx.workspace.memberActionsDir(), `${memberActionName}.rb`);
-        if (fs.existsSync(memberActionFile)) {
+        if (ctx.check.isFile(memberActionFile).ok) {
             ctx.log(`❌ The member action ${memberActionName} already exists. Please try again.`);
             vscode.window.showErrorMessage(`The member action ${memberActionName} already exists. Please try again.`);
             return;
         }
 
-        const memberActionNameCamelCase = memberActionName.toLowerCase().replace(/[-_][a-z0-9]/g, (g) => g.slice(-1).toUpperCase());
+        // thecore_generators ships `rails generate thecore:member_action`
+        // (thecore_generators#12): it creates the action file, its view/JS/SCSS companions, the
+        // after_initialize.rb require line, the assets.rb precompile line, and locale entries,
+        // with the same ATOM-aware placement addModel.js/addMigration.js/addRootAction.js
+        // already delegate to — see CLAUDE.md's "addModel / addMigration / addRootAction /
+        // addMemberAction — thin wrappers" section for the full rationale. This command's only
+        // remaining job is to shell out and trust it.
+        const atomFlag = isAtom ? ` --atom=${ctx.workspace.atomName}` : '';
+        const command = `bundle install && rails g thecore:member_action "${memberActionName}"${atomFlag} --non-interactive`;
 
-        ctx.write.textFile(ctx.workspace.memberActionsDir(), `${memberActionName}.rb`,
-            renderTemplate('addMemberAction/action.rb', { actionName: memberActionName }));
+        const output = await ctx.exec(command, ctx.workspace.appRoot());
 
-        ctx.mkdir(ctx.workspace.viewsDir());
-        ctx.write.textFile(ctx.workspace.viewsDir(), `${memberActionName}.html.erb`,
-            renderTemplate('addMemberAction/action.html.erb', { actionName: memberActionName }));
-
-        const afterInitializeFile = ctx.workspace.initializerFile('after_initialize.rb');
-        if (!fs.existsSync(afterInitializeFile)) {
-            ctx.write.textFile(path.dirname(afterInitializeFile), 'after_initialize.rb',
-                renderTemplate('createATOM/after_initialize.rb'));
-        }
-        // Main app actions live under config/ and are not on the load path,
-        // so require by full path there (see docs/adr/0001).
-        const requireLine = isAtom
-            ? `require 'member_actions/${memberActionName}'`
-            : `require Rails.root.join('config', 'member_actions', '${memberActionName}').to_s`;
-        const afterInitializeContent = fs.readFileSync(afterInitializeFile).toString();
-        if (!afterInitializeContent.includes(requireLine)) {
-            const lines = afterInitializeContent.split('\n');
-            const idx = lines.findIndex(l => l.includes('config.after_initialize do'));
-            lines.splice(idx + 1, 0, `        ${requireLine}`);
-            fs.writeFileSync(afterInitializeFile, lines.join('\n'));
-            ctx.log(`The member action require line has been added to the ${afterInitializeFile} file.`);
-        } else {
-            ctx.log(`The member action require line is already present in the ${afterInitializeFile} file.`);
+        if (!output) {
+            const msg = 'No output from rails g command exists, cannot go on';
+            ctx.log(`❌ ${msg}, please inspect the output window.`);
+            vscode.window.showErrorMessage(`${msg}, please inspect the output window.`);
+            return;
         }
 
-        const assetsFile = ctx.workspace.assetsFile();
-        if (!fs.existsSync(assetsFile)) {
-            ctx.write.textFile(path.dirname(assetsFile), 'assets.rb', renderTemplate('createATOM/assets.rb'));
-        }
-        const assetsContent = fs.readFileSync(assetsFile).toString();
-        const assetsLine = `Rails.application.config.assets.precompile += %w( rails_admin/actions/${memberActionName}.js rails_admin/actions/${memberActionName}.css )`;
-        if (!assetsContent.includes(assetsLine)) {
-            fs.appendFileSync(assetsFile, `\n${assetsLine}`);
-            ctx.log(`The member action assets precompile line has been added to the ${assetsFile} file.`);
-        } else {
-            ctx.log(`The member action assets precompile line is already present in the ${assetsFile} file.`);
-        }
-
-        ctx.mkdir(ctx.workspace.cssAssetsDir());
-        ctx.write.textFile(ctx.workspace.cssAssetsDir(), `${memberActionName}.scss`,
-            renderTemplate('shared/action.scss', { actionName: memberActionName }));
-
-        ctx.mkdir(ctx.workspace.jsAssetsDir());
-        ctx.write.textFile(ctx.workspace.jsAssetsDir(), `${memberActionName}.js`,
-            renderTemplate('addMemberAction/action.js', { actionName: memberActionName, actionNameCamelCase: memberActionNameCamelCase }));
-
-        const memberActionNameTitleCase = memberActionName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        const localesDir = ctx.workspace.localesDir();
-        [['en.yml', 'en'], ['it.yml', 'it']].forEach(([file, lang]) => {
-            if (!fs.existsSync(path.join(localesDir, file))) {
-                ctx.write.yamlFile(localesDir, file, { [lang]: null });
-            }
-        });
-        ctx.write.mergeYaml(localesDir, 'en.yml', memberActionName, memberActionNameTitleCase, 'en');
-        ctx.write.mergeYaml(localesDir, 'it.yml', memberActionName, memberActionNameTitleCase, 'it');
-
+        // "member Action" (capital A) is the exact wording the pre-delegation command always
+        // used — kept verbatim so the AC's "same user-visible messages" holds literally.
         ctx.log(`✅ The member Action ${memberActionName} has been added successfully.`);
         vscode.window.showInformationMessage(`The member Action ${memberActionName} has been added successfully.`);
     } catch (error) {

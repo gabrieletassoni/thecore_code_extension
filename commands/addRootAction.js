@@ -61,6 +61,7 @@ async function perform(ctx) {
 
         const rootActionFile = path.join(ctx.workspace.rootActionsDir(), `${rootActionName}.rb`);
         if (ctx.check.isFile(rootActionFile).ok) {
+            ctx.log(`❌ The root action ${rootActionName} already exists. Please try again.`);
             vscode.window.showErrorMessage(`The root action ${rootActionName} already exists. Please try again.`);
             return;
         }
