@@ -67,11 +67,11 @@ describe('libs/templates — renderTemplate', () => {
 
     it('uses the correct path separator when building the template path', () => {
         const readStub = sinon.stub(fs, 'readFileSync').returns('');
-        renderTemplate('addRootAction/action.rb');
+        renderTemplate('createATOM/abilities.rb');
         const calledPath = readStub.firstCall.args[0];
         assert.ok(
-            calledPath.endsWith(path.join('addRootAction', 'action.rb')),
-            `path should end with addRootAction${path.sep}action.rb, got ${calledPath}`
+            calledPath.endsWith(path.join('createATOM', 'abilities.rb')),
+            `path should end with createATOM${path.sep}abilities.rb, got ${calledPath}`
         );
     });
 });

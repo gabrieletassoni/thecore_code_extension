@@ -68,6 +68,7 @@ function makeCtx(overrides = {}) {
         show: sinon.stub(),
         log: sinon.stub(),
         exec: sinon.stub().resolves(''),
+        execAllowNonZero: sinon.stub().resolves(''),
         mkdir: sinon.stub(),
         workspace: null,
         check: {

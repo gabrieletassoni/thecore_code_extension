@@ -4,7 +4,7 @@ const vscode = require('vscode');
 const fs = require('fs');
 const check = require('./check');
 const configs = require('./configs');
-const { execShell, mkDirP } = require('./os');
+const { execShell, execShellAllowNonZero, mkDirP } = require('./os');
 const { renderTemplate } = require('./templates');
 const workspaceContext = require('./workspaceContext');
 
@@ -127,6 +127,12 @@ class ExecutionContext {
 
     async exec(cmd, cwd) {
         return execShell(cmd, cwd, this._channel);
+    }
+
+    // Used only by checkPractices.js — see execShellAllowNonZero's own doc comment for why a
+    // non-zero exit isn't necessarily a failure for that one caller.
+    async execAllowNonZero(cmd, cwd) {
+        return execShellAllowNonZero(cmd, cwd, this._channel);
     }
 
     mkdir(dir) {

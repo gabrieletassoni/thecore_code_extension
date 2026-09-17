@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { execShell, mkDirP } = require('../../libs/os');
+const { execShell, execShellAllowNonZero, mkDirP } = require('../../libs/os');
 
 function oc() {
     return { appendLine: () => {}, append: () => {} };
@@ -26,6 +26,32 @@ describe('libs/os', () => {
         it('rejects when the command exits with a non-zero code', async () => {
             await assert.rejects(
                 execShell('node -e "process.exit(1)"', os.tmpdir(), oc()),
+                (err) => err !== null
+            );
+        });
+    });
+
+    // ── execShellAllowNonZero ────────────────────────────────────────────────
+
+    describe('execShellAllowNonZero', () => {
+        it('resolves with stdout when the command succeeds', async () => {
+            const result = await execShellAllowNonZero('echo thecore_test', os.tmpdir(), oc());
+            assert.ok(result.includes('thecore_test'), `unexpected stdout: ${result}`);
+        });
+
+        it('resolves with stdout when the command exits non-zero but still printed output ' +
+            '(the check_practices "violations found" case)', async () => {
+            const result = await execShellAllowNonZero(
+                'node -e "console.log(\'thecore_test\'); process.exit(1)"',
+                os.tmpdir(),
+                oc()
+            );
+            assert.ok(result.includes('thecore_test'), `unexpected stdout: ${result}`);
+        });
+
+        it('rejects when the command exits non-zero and produced no stdout at all', async () => {
+            await assert.rejects(
+                execShellAllowNonZero('node -e "process.exit(1)"', os.tmpdir(), oc()),
                 (err) => err !== null
             );
         });

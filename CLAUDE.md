@@ -44,14 +44,9 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) t
 │   ├── thecoreGeneratorsGuard.js # Confirm-and-fix flow for the thecore_generators Gemfile guard
 │   └── workspaceContext.js   # ATOMContext / AppContext factory
 ├── templates/                # Static template files used by commands
-│   ├── addMemberAction/      # action.rb, action.js, action.html.erb — same as addRootAction/
-│   │                         # below: no longer read by addMemberAction.js itself, only by
-│   │                         # checkPractices.js's own --fix (until thecore_code_extension#38)
-│   ├── addRootAction/        # action.rb, action.js, action.html.erb — no longer read by
-│   │                         # addRootAction.js itself (delegated to thecore_generators), only
-│   │                         # by checkPractices.js's own --fix (until thecore_code_extension#38)
 │   ├── createATOM/           # abilities.rb, after_initialize.rb, assets.rb, seeds.rb
-│   └── shared/               # action.scss, gitignore
+│   └── shared/               # gitignore (action.scss was removed alongside checkPractices.js's
+│                             # delegation — thecore_code_extension#38 — its only remaining reader)
 ├── test/                     # Mocha test suite
 │   ├── setup.js              # Global require hook — intercepts require('vscode')
 │   ├── vscode.mock.js        # Lightweight VSCode API mock
@@ -93,7 +88,7 @@ Context is controlled in `package.json` via `contributes.menus["explorer/context
 
 Dual-context commands (`addModel`, `addRootAction`, `addMemberAction`, `addMigration`) dispatch on `ctx.workspace.type()`: in ATOM context they validate the gemspec against `ctx.workspace.atomDir`/`atomName`; in app context they validate the workspace root with `railsAppValid()`. Right-clicking *any* folder inside an ATOM's tree resolves to the owning ATOM. When invoked from the Command Palette (no folder argument), `workspaceContext.from(undefined)` falls back to an `AppContext` on the workspace root, so the main app is the default target. Main-app actions are generated into `config/root_actions` / `config/member_actions`, never `lib/` (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
-All four dual-context commands (`addModel`/`addMigration`/`addRootAction`/`addMemberAction`) are now thin wrappers over `thecore_generators` — see the next section. `createATOM` is the one command left that still places/moves its generated files itself (templating + `fs` writes); it hasn't been ported to a `thecore_generators` equivalent (no ATOM generator exists yet — see `thecore` repo's ADR 0004, Phase 3, not yet scoped).
+All four dual-context commands (`addModel`/`addMigration`/`addRootAction`/`addMemberAction`) are now thin wrappers over `thecore_generators` — see the next section — and so is `checkPractices` (see its own section further below). `createATOM` is the one command left that still places/moves its generated files itself (templating + `fs` writes); it hasn't been ported to a `thecore_generators` equivalent (no ATOM generator exists yet — see `thecore` repo's ADR 0004, Phase 3, not yet scoped).
 
 ### `addModel` / `addMigration` / `addRootAction` / `addMemberAction` — thin wrappers over `thecore_generators`
 
@@ -112,7 +107,7 @@ The flags on the shelled-out command matter and are always passed together:
 
 #### `thecore_generators` Gemfile guard
 
-Because `addModel`/`addMigration`/`addRootAction` now trust `rails generate` completely, a host app whose `Gemfile` doesn't actually depend on `thecore_generators` gets a **silent** regression: plain `rails g model`/`migration`/`thecore:root_action` still runs (or, for `thecore:root_action` specifically, doesn't exist as a namespace at all and fails outright) but with none of the ATOM-aware placement, default-first concerns, or inverse-association wiring described above — there is no error, no warning, nothing to indicate anything went wrong for `model`/`migration`. All three commands guard against this after their existing context guard checks (`hasGemspec`/`railsAppValid`) but *before* collecting the name (and definition), so a dismissed prompt doesn't waste typing:
+Because `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` now trust `rails` completely, a host app whose `Gemfile` doesn't actually depend on `thecore_generators` gets a **silent** regression (for `model`/`migration`) or an outright failure (`thecore:root_action`/`thecore:member_action`/`thecore:check_practices` simply don't exist as namespaces/tasks) — there is no clear "you're missing a dependency" signal either way. All five commands guard against this after their existing context guard checks (`hasGemspec`/`railsAppValid`) but *before* collecting the name (and definition) or running the audit, so a dismissed prompt doesn't waste typing:
 
 ```js
 const gemfilePath = path.join(ctx.workspace.appRoot(), 'Gemfile');
@@ -123,10 +118,22 @@ if (!ctx.check.hasThecoreGenerators(gemfilePath).ok) {
 
 - **`ctx.check.hasThecoreGenerators(gemfilePath)`** (`CheckContext`, in `libs/executionContext.js`) reads the Gemfile (treating a missing file as empty content) and delegates the actual detection to the pure `check.hasThecoreGenerators(gemfileContent)` predicate in `libs/check.js` — a tolerant regex (`/gem\s+['"]thecore_generators['"]/`) that matches regardless of quote style, version constraint, or whether the line sits bare or inside a `group` block.
 - On a failed check, `confirmAndAddThecoreGenerators(ctx, gemfilePath)` (`libs/thecoreGeneratorsGuard.js`) shows a `vscode.window.showWarningMessage` explaining the silent-fallback risk, with a single **"Add & Bundle Install"** action button.
-  - **Dismissed/cancelled** (any response other than that exact button, including pressing Escape) — the function returns `false`, all three commands `return` immediately, and `rails generate` never runs.
-  - **Confirmed** — it patches the Gemfile via `insertGemIntoDevelopmentGroup` (`libs/configs.js`, a pure content transform — see below), adding `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block (reusing one if the Gemfile already has a bare `group :development do` block — Rails' own default Gemfile ships one, e.g. for `web-console` — or creating a fresh one otherwise; it deliberately does **not** reuse a `group :development, :test do` block, since that would also load the gem in the test env), runs `bundle install` via `ctx.exec`, and returns `true` so the caller proceeds with the original `rails g` command.
+  - **Dismissed/cancelled** (any response other than that exact button, including pressing Escape) — the function returns `false`, all five commands `return` immediately, and no `rails`/`bundle` command of the caller's own ever runs.
+  - **Confirmed** — it patches the Gemfile via `insertGemIntoDevelopmentGroup` (`libs/configs.js`, a pure content transform — see below), adding `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block (reusing one if the Gemfile already has a bare `group :development do` block — Rails' own default Gemfile ships one, e.g. for `web-console` — or creating a fresh one otherwise; it deliberately does **not** reuse a `group :development, :test do` block, since that would also load the gem in the test env), runs `bundle install` via `ctx.exec`, and returns `true` so the caller proceeds with its own original command.
 
-Regression check: a workspace whose Gemfile already has `thecore_generators` never triggers the warning at all — `ctx.check.hasThecoreGenerators` is `ok: true` and all three commands proceed exactly as before this guard existed.
+Regression check: a workspace whose Gemfile already has `thecore_generators` never triggers the warning at all — `ctx.check.hasThecoreGenerators` is `ok: true` and all five commands proceed exactly as before this guard existed.
+
+### `checkPractices` — thin wrapper over `rails thecore:check_practices`
+
+Since `thecore_generators` ships `rails thecore:check_practices` (thecore_generators#13/#14, per ADR 0004 in the `thecore` repo), `checkPractices.js` no longer scans the filesystem, checks markers, or renders templates to decide what's fixable itself — it shells out to `rails thecore:check_practices -- --json[ --atom=<name>]`, parses the JSON payload into the same `vscode.Diagnostic`s-grouped-by-file shape it always rendered, and — on the same Yes/No QuickPick ("Fix N of M?") it always showed — re-invokes with ` --fix` appended (still asking for `--json` too, so the *remaining* violations can be parsed and re-rendered). The rake task applies every fixable violation itself and reports whatever's left in the same pass; there is no separate client-side "apply, then re-scan" round trip, and no confirmation on the `--fix` side — the QuickPick is the only one. `--atom=<name>` is passed only in ATOM context, same convention as the other four commands; omitted in host-app context it now scans the host app **plus every ATOM under `vendor/submodules/`** in one pass (broader than the old JS, which only ever looked at the host app's own `app/models`/action directories when invoked from there — a deliberate scope widening from ADR 0004, not a bug).
+
+**`ctx.execAllowNonZero`, not `ctx.exec`**: `rails thecore:check_practices` exits non-zero whenever it finds violations — its normal, expected reporting convention (mirroring RuboCop/ESLint), not a failure — but `ctx.exec`/`execShell` rejects on *any* non-zero exit and, verified directly (`node -e "require('child_process').exec(...)"` against this runtime), Node's own exec error object does not carry stdout here, so the reject path would silently discard the `--json` payload on the overwhelmingly common "found some violations" outcome. `execShellAllowNonZero` (`libs/os.js`) / `ctx.execAllowNonZero` (`libs/executionContext.js`) is a **separate** function/method for this one caller — deliberately not a behavior change to `execShell`/`ctx.exec` itself, since every other command relies on it rejecting on a genuine `rails g` failure (which also exits non-zero and can print output) to show that failure as an error rather than a false "success". It only rejects when nothing was captured at all (e.g. `bundle install` itself failing before check_practices ever runs).
+
+**Extracting the JSON from a noisy stdout**: a real `rails thecore:check_practices -- --json` invocation prints Rails/RailsAdmin/Sidekiq boot noise to stdout *before* the actual payload (verified directly — none of it goes to stderr, so it can't be filtered out that way). `commands/checkPractices.js`'s `extractJson` scans the captured output from the last line backward for the last brace-delimited line that both `JSON.parse`s *and* has an array `violations` key, since `Thecore::CheckPractices::Reporter.json` always `puts`s the payload as a single line, last — the shape check (not just a successful parse) is what lets the scan keep looking further back if some other single-line JSON object (e.g. a structured-logging gem) ever ends up printed after the real payload, instead of misreporting it as unparseable output.
+
+`runCheckPractices(ctx, isAtom, extraFlags, withBundleInstall = true)` prefixes the shelled command with `bundle install && ` only when `withBundleInstall` is true. The initial scan needs it (nothing has ensured `thecore_generators` is actually installed yet), but the `--fix` re-invocation passes `withBundleInstall: false` — the Gemfile/lockfile cannot have changed in the few seconds between the two calls within one `perform()` run, so re-running `bundle install` a second time would just be wasted work.
+
+No violation-detection logic (marker checks, `fs` scans, template comparisons, `renderTemplate` calls) remains in `checkPractices.js` — `templates/addRootAction/`, `templates/addMemberAction/`, and `templates/shared/action.scss` were deleted alongside this port, since `checkPractices.js`'s own `--fix` handling was their last reader (`addRootAction.js`/`addMemberAction.js` stopped reading them when *they* were delegated, thecore_code_extension#36/#37).
 
 ---
 
@@ -208,7 +215,8 @@ Pure file I/O helpers — **no `outputChannel` parameter**. Write files; callers
 
 ### `libs/os.js`
 
-- `execShell(cmd, workingDirectory, outputChannel)` — async shell execution; streams dots while running
+- `execShell(cmd, workingDirectory, outputChannel)` — async shell execution; streams dots while running; **rejects on any non-zero exit**.
+- `execShellAllowNonZero(cmd, workingDirectory, outputChannel)` — same, but only rejects when nothing was captured at all; used solely by `checkPractices.js` via `ctx.execAllowNonZero` (see its own CLAUDE.md section) since a non-zero exit isn't a failure for that one caller.
 - `mkDirP(dir, outputChannel)` — recursive `mkdir`; creates a `.keep` file in new directories
 
 ### `libs/templates.js`
@@ -286,7 +294,7 @@ Never use `console.log` for user output. Never pass `outputChannel` to `check.js
 
 - Commands use `runner.check(result, showErr)` for guard checks — it calls `showErr` and returns `false` on failure.
 - Commands use a top-level `try/catch` around I/O operations.
-- `execShell` rejects on non-zero exit codes.
+- `execShell` rejects on non-zero exit codes — except `execShellAllowNonZero`/`ctx.execAllowNonZero`, used only by `checkPractices.js`, which doesn't (see `libs/os.js` and the `checkPractices` section above).
 
 ---
 

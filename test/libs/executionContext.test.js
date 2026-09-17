@@ -228,6 +228,19 @@ describe('libs/executionContext — CheckContext', () => {
         });
     });
 
+    describe('execAllowNonZero()', () => {
+        it('delegates to execShellAllowNonZero with the channel', async () => {
+            const execShellAllowNonZeroStub = sinon.stub().resolves('output');
+            const ExecCtxWithStub = proxyquire('../../libs/executionContext', {
+                './os': { execShell: sinon.stub(), execShellAllowNonZero: execShellAllowNonZeroStub, mkDirP: sinon.stub() },
+            });
+            const ctx = new ExecCtxWithStub.ExecutionContext('Test', undefined);
+            const result = await ctx.execAllowNonZero('rails thecore:check_practices -- --json', '/tmp');
+            assert.strictEqual(result, 'output');
+            assert.ok(execShellAllowNonZeroStub.calledWith('rails thecore:check_practices -- --json', '/tmp', sinon.match.object));
+        });
+    });
+
     describe('mkdir()', () => {
         it('delegates to mkDirP with the channel', async () => {
             const mkDirPStub = sinon.stub().resolves();

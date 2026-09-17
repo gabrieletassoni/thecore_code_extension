@@ -3,7 +3,7 @@ const path = require('path');
 
 /**
  * Reads a template file and replaces {{key}} placeholders with the provided values.
- * @param {string} templateRelPath - Path relative to the templates/ directory (e.g. 'addRootAction/action.rb')
+ * @param {string} templateRelPath - Path relative to the templates/ directory (e.g. 'createATOM/after_initialize.rb')
  * @param {Object} vars - Key/value pairs to substitute
  * @returns {string} Rendered content
  */
