@@ -4,6 +4,20 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.6.0]
+
+### Changed
+- `commands/addRootAction.js`/`commands/addMemberAction.js` — now thin wrappers shelling out to `rails g thecore:root_action`/`thecore:member_action` (requires `thecore_generators` >= 3.5.0/3.6.0) instead of rendering templates and writing files themselves; no more locale YAML merging, `after_initialize.rb`/`assets.rb` writes, or stdout-scraping on the extension side (closes #36, #37)
+- `commands/checkPractices.js` — now a thin wrapper shelling out to `rails thecore:check_practices -- --json[ --atom=NAME]` (requires `thecore_generators` >= 3.6.0) instead of scanning the filesystem, checking markers, or rendering templates itself; without `--atom` it now scans the main app plus every ATOM under `vendor/submodules/` in one pass — broader than before, which only ever looked at the invoking context. Re-invokes with `--fix` on the same confirmation QuickPick as before, applying every fixable violation in one pass with no client-side fix logic remaining (closes #38)
+- `libs/os.js`/`libs/executionContext.js` — new `execShellAllowNonZero`/`ctx.execAllowNonZero`, used only by `checkPractices.js`, since `rails thecore:check_practices` exits non-zero whenever it finds violations as its normal reporting convention, not a failure
+- `libs/thecoreGeneratorsGuard.js` — `GEM_LINE` bumped to `~> 3.6`
+- `CONTEXT.md` — add "Application Template"/"Setup Devcontainer" glossary terms (thecore's ADR 0005)
+- `README.md`/`AGENTS.md`/`CONTEXT.md` — fixed stale descriptions claiming `addRootAction.js`/`addMemberAction.js` move files themselves and `checkPractices.js` does its own scanning/marker-checking/fix-application
+
+### Removed
+- `templates/addRootAction/`, `templates/addMemberAction/`, `templates/shared/action.scss` — no longer read by anything, since `checkPractices.js`'s own `--fix` was their last reader
+- `libs/check.js` — `hasUnreplacedTokens`/`hasSkeletonMarker`, used only by the pre-delegation detection logic this release removes
+
 ## [3.5.0]
 
 ### Added
