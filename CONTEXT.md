@@ -53,3 +53,11 @@ _Avoid_: landmark, anchor
 **Thecore Generators Guard**:
 The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
 _Avoid_: gem check (too generic), dependency check
+
+**Application Template**:
+The `rails new -m` script (`thecore_generators`, porting `createApp.js`, see `docs/adr/0005-app-template-scoped-to-rails-new-m-assets-sourced-from-thecore-samples.md` in the `thecore` repo) that bootstraps a new Main App: Rails app generation, the core Gemfile stack, and a devcontainer/CI/CLAUDE.md skeleton fetched from `thecore`'s own `samples/` at generation time rather than duplicated inside `thecore_generators`. Runs inside a devcontainer already created by Setup Devcontainer, whose files it then overwrites with the full generic configuration; produces a deliberately blank app with no customer-specific submodules or vendor gems pre-wired.
+_Avoid_: app template (ambiguous with Rails' own generic concept of the same name — capitalize when referring to this specific one), bootstrap script
+
+**Setup Devcontainer**:
+The existing VS Code command (`setupDevContainer.js`) that creates a minimal bootstrap devcontainer in an empty folder — a prerequisite for running the Application Template, whose richer devcontainer output overwrites what this command created. Not itself part of the Phase 3 scaffolding-standardization work; left unchanged by it.
+_Avoid_: devcontainer setup (too generic)
