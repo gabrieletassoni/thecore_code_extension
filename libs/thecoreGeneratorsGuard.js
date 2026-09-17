@@ -5,21 +5,28 @@ const vscode = require('vscode');
 const { insertGemIntoDevelopmentGroup } = require('./configs');
 
 // Keep this version constraint in sync with the thecore_generators release this extension is
-// tested against — see docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md in
-// the thecore repo.
-const GEM_LINE = 'gem "thecore_generators", "~> 3.2"';
+// tested against — see docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md and
+// docs/adr/0004-check-practices-structured-output-and-action-generator-resequencing.md in the
+// thecore repo. Bumped to ~> 3.6 (thecore_generators#15): 3.6.0 is the first version carrying
+// thecore:root_action/thecore:member_action/thecore:check_practices (thecore_generators#11-14),
+// which addRootAction.js/addMemberAction.js/checkPractices.js now depend on existing at all, not
+// just behaving correctly (thecore_code_extension#36/#37/#38).
+const GEM_LINE = 'gem "thecore_generators", "~> 3.6"';
 
 const ACTION_LABEL = 'Add & Bundle Install';
 
 const WARNING_MESSAGE =
-    'thecore_generators is missing from this app\'s Gemfile. Without it, `rails generate model`/`migration` ' +
-    'silently falls back to plain, un-hooked Rails behavior — no ATOM-aware file placement, no default-first ' +
-    'concerns, and no inverse-association wiring — with no other indication anything is wrong.';
+    'thecore_generators is missing from this app\'s Gemfile. Without it, `rails generate model`/`migration`/' +
+    '`thecore:root_action`/`thecore:member_action` and `rails thecore:check_practices` silently fall back to ' +
+    'plain, un-hooked Rails behavior (or fail outright, for the thecore:*-namespaced ones) — no ATOM-aware ' +
+    'file placement, no default-first concerns, no inverse-association wiring, no action scaffolding, no ' +
+    'practices audit — with no other indication anything is wrong.';
 
 /**
- * Shown by addModel.js/addMigration.js after their existing guard checks pass and
- * ctx.check.hasThecoreGenerators(gemfilePath) came back not-ok, and before shelling out to
- * `rails generate`. Only on explicit confirmation does it patch the Gemfile (inside a
+ * Shown by addModel.js/addMigration.js/addRootAction.js/addMemberAction.js/checkPractices.js
+ * after their existing guard checks pass and ctx.check.hasThecoreGenerators(gemfilePath) came
+ * back not-ok, and before shelling out to `rails`. Only on explicit confirmation does it patch
+ * the Gemfile (inside a
  * `group :development do ... end` block — thecore_generators is dev-tooling only, never a
  * runtime dependency) and run `bundle install`. Dismissing/cancelling the prompt aborts the
  * caller entirely: it returns false, and callers must not proceed to `rails generate` on false.

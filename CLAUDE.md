@@ -119,7 +119,7 @@ if (!ctx.check.hasThecoreGenerators(gemfilePath).ok) {
 - **`ctx.check.hasThecoreGenerators(gemfilePath)`** (`CheckContext`, in `libs/executionContext.js`) reads the Gemfile (treating a missing file as empty content) and delegates the actual detection to the pure `check.hasThecoreGenerators(gemfileContent)` predicate in `libs/check.js` — a tolerant regex (`/gem\s+['"]thecore_generators['"]/`) that matches regardless of quote style, version constraint, or whether the line sits bare or inside a `group` block.
 - On a failed check, `confirmAndAddThecoreGenerators(ctx, gemfilePath)` (`libs/thecoreGeneratorsGuard.js`) shows a `vscode.window.showWarningMessage` explaining the silent-fallback risk, with a single **"Add & Bundle Install"** action button.
   - **Dismissed/cancelled** (any response other than that exact button, including pressing Escape) — the function returns `false`, all five commands `return` immediately, and no `rails`/`bundle` command of the caller's own ever runs.
-  - **Confirmed** — it patches the Gemfile via `insertGemIntoDevelopmentGroup` (`libs/configs.js`, a pure content transform — see below), adding `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block (reusing one if the Gemfile already has a bare `group :development do` block — Rails' own default Gemfile ships one, e.g. for `web-console` — or creating a fresh one otherwise; it deliberately does **not** reuse a `group :development, :test do` block, since that would also load the gem in the test env), runs `bundle install` via `ctx.exec`, and returns `true` so the caller proceeds with its own original command.
+  - **Confirmed** — it patches the Gemfile via `insertGemIntoDevelopmentGroup` (`libs/configs.js`, a pure content transform — see below), adding `gem "thecore_generators", "~> 3.6"` inside a `group :development do ... end` block (reusing one if the Gemfile already has a bare `group :development do` block — Rails' own default Gemfile ships one, e.g. for `web-console` — or creating a fresh one otherwise; it deliberately does **not** reuse a `group :development, :test do` block, since that would also load the gem in the test env), runs `bundle install` via `ctx.exec`, and returns `true` so the caller proceeds with its own original command.
 
 Regression check: a workspace whose Gemfile already has `thecore_generators` never triggers the warning at all — `ctx.check.hasThecoreGenerators` is `ok: true` and all five commands proceed exactly as before this guard existed.
 
@@ -191,8 +191,6 @@ Pure validation predicates — **no `outputChannel` parameter**. Return values o
 - `isPascalCase(word)` — returns `true/false` or a string error for non-string input
 - `hasGemspec(atomDir, atomName)` — returns gemspec path or `false`
 - `isDir(path)` / `isFile(path)` — type checks
-- `hasUnreplacedTokens(content)` — returns `true` if `content` still contains `{{...}}` template placeholders
-- `hasSkeletonMarker(content, marker)` — returns `true` if `content` includes the expected structural marker string
 - `hasThecoreGenerators(gemfileContent)` — returns `true` if `gemfileContent` contains a `thecore_generators` gem line (tolerant of quote style, version constraint, and `group` block nesting)
 
 ### `libs/configs.js`
@@ -205,7 +203,7 @@ Pure file I/O helpers — **no `outputChannel` parameter**. Write files; callers
 ### `libs/thecoreGeneratorsGuard.js`
 
 - `confirmAndAddThecoreGenerators(ctx, gemfilePath)` — the interactive confirm-and-fix flow described above; shows the warning, and on confirmation patches the Gemfile and runs `bundle install`. Returns a `Promise<boolean>` indicating whether the caller should proceed.
-- `GEM_LINE` — the exact gem line added: `gem "thecore_generators", "~> 3.2"`.
+- `GEM_LINE` — the exact gem line added: `gem "thecore_generators", "~> 3.6"`.
 - `ACTION_LABEL` — the warning dialog's action button text (`"Add & Bundle Install"`).
 
 ### `libs/helpers.js`

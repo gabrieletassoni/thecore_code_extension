@@ -30,7 +30,7 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 
 ### Main application and ATOM context
 
-These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). Generated files stay where they belong for the chosen target: for `Add a Root Action` / `Add a Member Action` the extension itself moves them into the ATOM in ATOM context (or leaves them in the standard Rails locations in main app context); for `Add a Model` / `Add a DB Migration` the extension shells out to `rails g model`/`rails g migration` and the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) Rails generator hook places the files itself (see [Model / Migration generation](#model--migration-generation) below) — except actions, which are generated into `config/root_actions` / `config/member_actions` so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
+These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). All four generator commands shell out to `rails g` and let the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) Rails generator hook place the files itself — the extension does no templating or file placement of its own for any of them (see [Model / Migration generation](#model--migration-generation) and [Root / Member Action generation](#root--member-action-generation) below). Main-app actions are generated into `config/root_actions` / `config/member_actions` (not `lib/`) so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
 | Command | Title | Description |
 |---|---|---|
@@ -70,16 +70,26 @@ All of that is handled by the [`thecore_generators`](https://github.com/gabriele
 
 See `thecore_generators`' own README and the `docs/adr/` in the [`thecore`](https://github.com/gabrieletassoni/thecore) repo for the full behavior.
 
+## Root / Member Action generation
+
+`Add a Root Action` and `Add a Member Action` are thin wrappers too, the same way: the extension collects the snake_case action name, then shells out to `bundle install && rails g thecore:root_action|thecore:member_action "<name>" [--atom=<name>] --non-interactive` from the main application root and trusts the result — no template rendering, no `fs` writes, no locale YAML merging on the extension side. (The one thing the extension still checks itself is whether the action already exists, before shelling out, so a re-run gets a clear "already exists" error instead of risking a shelled, non-interactive process hitting an interactive file-collision prompt it could never answer.)
+
+`thecore_generators`' `rails generate thecore:root_action`/`thecore:member_action` (`Thecore::Generators::RootActionGenerator`/`MemberActionGenerator`) create the action file (RailsAdmin `:root`/`:member` action type), its view/JS/SCSS companions, the `config/initializers/after_initialize.rb` require line, the `config/initializers/assets.rb` precompile line, and locale entries in every `*.yml` already present under `config/locales` — all in one generator run, with the same ATOM-aware placement Model/Migration generation uses.
+
 ### Missing `thecore_generators` guard
 
-Since `addModel`/`addMigration` fully trust `rails generate`, a Gemfile that doesn't actually depend on `thecore_generators` would otherwise fail silently: plain Rails generators still run and still succeed, just without any ATOM-aware placement, default-first concerns, or inverse-association wiring, with no error or warning of any kind. Both commands now check for `thecore_generators` in the workspace's `Gemfile` before shelling out:
+Since `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` all fully trust `rails`, a Gemfile that doesn't actually depend on `thecore_generators` would otherwise fail silently (for `model`/`migration`, which still "work" but with none of the behavior above) or fail outright (`thecore:root_action`/`thecore:member_action`/`thecore:check_practices` simply don't exist as commands). All five commands check for `thecore_generators` in the workspace's `Gemfile` before shelling out:
 
 - **Present** — no change in behavior; the command proceeds exactly as described above.
 - **Missing** — a warning is shown explaining the risk, with an **"Add & Bundle Install"** action button.
-  - Clicking it adds `gem "thecore_generators", "~> 3.2"` inside a `group :development do ... end` block in the `Gemfile` (reusing one if the Gemfile already has a bare `group :development do` block, creating one otherwise), runs `bundle install`, and then proceeds with the original `rails g model`/`migration` invocation.
-  - Dismissing or cancelling the warning aborts the command entirely — `rails generate` is never invoked.
+  - Clicking it adds `gem "thecore_generators", "~> 3.6"` inside a `group :development do ... end` block in the `Gemfile` (reusing one if the Gemfile already has a bare `group :development do` block, creating one otherwise), runs `bundle install`, and then proceeds with the original command.
+  - Dismissing or cancelling the warning aborts the command entirely — nothing further is ever invoked.
 
 `thecore.createApp` adds `thecore_generators` to a new app's `Gemfile` automatically (same `group :development` block), so freshly-created Thecore 3 apps never hit this guard.
+
+## Check Practices
+
+`thecore.checkPractices` is a thin wrapper over `rails thecore:check_practices` (`Thecore::CheckPractices` in `thecore_generators`): the extension shells out to `bundle install && rails thecore:check_practices -- --json[ --atom=<name>]`, parses the JSON payload, and renders it as VS Code diagnostics grouped by file — no filesystem scanning, marker checking, or template comparison happens in the extension itself. When any violation is fixable, a Yes/No QuickPick ("Fix N of M?") offers to apply them; on "Yes" the extension re-invokes with `--fix` appended (still `--json`, so the diagnostics can be re-rendered from whatever's left) — the rake task applies every fixable violation and reports what remains in that same pass, with no confirmation of its own.
 
 ## Requirements
 

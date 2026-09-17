@@ -5,6 +5,7 @@ const sinon = require('sinon');
 const fs = require('fs');
 const vscode = require('vscode');
 const { perform } = require('../commands/createApp');
+const { GEM_LINE } = require('../libs/thecoreGeneratorsGuard');
 const { makeCtx, FAKE_ROOT } = require('./helpers/makeCtx');
 
 describe('commands/createApp', () => {
@@ -66,7 +67,9 @@ describe('commands/createApp', () => {
         assert.ok(gemfileWrites.length > 0, 'expected at least one Gemfile write containing thecore_generators');
         const finalGemfileWrite = gemfileWrites[gemfileWrites.length - 1];
         assert.ok(finalGemfileWrite.args[1].includes('group :development do'));
-        assert.ok(finalGemfileWrite.args[1].includes('gem "thecore_generators", "~> 3.2"'));
+        // Import the real constant rather than hardcoding the version again here, so this
+        // assertion can't silently go stale the next time GEM_LINE's version bumps.
+        assert.ok(finalGemfileWrite.args[1].includes(GEM_LINE));
         // model_driven_api/thecore_ui_rails_admin stay bare runtime deps, unlike thecore_generators.
         assert.ok(finalGemfileWrite.args[1].includes("gem 'model_driven_api'"));
     });

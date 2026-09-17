@@ -58,10 +58,6 @@ const isFile = (filePath) => {
     return fs.existsSync(filePath) && fs.lstatSync(filePath).isFile();
 };
 
-const hasUnreplacedTokens = (content) => /\{\{[^}]+\}\}/.test(content);
-
-const hasSkeletonMarker = (content, marker) => content.includes(marker);
-
 // Tolerant of quote style ('/"), version constraint presence/absence, and whether the gem
 // line sits inside a `group` block or is bare — a full Ruby/Bundler parse is overkill for
 // detecting "is this gem mentioned at all in the Gemfile".
@@ -77,7 +73,5 @@ module.exports = {
     hasGemspec,
     isDir,
     isFile,
-    hasUnreplacedTokens,
-    hasSkeletonMarker,
     hasThecoreGenerators,
 };

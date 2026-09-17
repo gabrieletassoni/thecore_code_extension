@@ -86,14 +86,13 @@ Do **not** use `proxyquire` for command tests. Do **not** stub `fs` or `vscode.w
 
 ### checkPractices — Diagnostic Audit Command
 
-`checkPractices.js` is the only command that produces VS Code diagnostics rather than generating files. Key patterns that differ from other commands:
+`checkPractices.js` is the only command that produces VS Code diagnostics rather than generating files — and, since thecore_code_extension#38, a thin wrapper over `rails thecore:check_practices` like the four generator commands are over their own `rails g`/`rails generate` invocations. It performs **no** filesystem scanning, marker checking, or template comparison itself. Key patterns:
 
-- Creates a `vscode.languages.createDiagnosticCollection('thecore-practices')` and populates it with `vscode.Diagnostic` objects pointing at specific file paths and line numbers.
-- Builds a `violations` array using internal helper functions (`checkScaffoldFiles`, `checkActions`, `checkModels`) before emitting anything.
-- Some violations carry a `fix` object with an `apply(ctx)` method. After emitting diagnostics, the command offers a QuickPick to apply all fixable violations in one step.
-- Uses `hasUnreplacedTokens(content)` and `hasSkeletonMarker(content, marker)` from `libs/check.js` — two pure string predicates added for this command.
-- Uses `ctx.workspace.concernsDir(type)` — a path helper exposed by both `ATOMContext` and `AppContext`.
-- In ATOM context, also validates Scaffold Files (`after_initialize.rb`, `assets.rb`). In both contexts, audits every action `.rb` file and every model concern file.
+- Shells out to `bundle install && rails thecore:check_practices -- --json[ --atom=<name>]` via `ctx.execAllowNonZero` (not `ctx.exec` — the rake task exits non-zero whenever it finds violations, which is its normal reporting convention, not a failure; see `libs/os.js`'s `execShellAllowNonZero` doc comment).
+- Parses the JSON payload out of the captured stdout (`extractJson`, scanning backward for the last line that both parses and has the expected `violations` array shape — a real invocation prints Rails/RailsAdmin boot noise to stdout before the payload).
+- Creates a `vscode.languages.createDiagnosticCollection('thecore-practices')` and populates it with `vscode.Diagnostic` objects built from each violation's `file`/`line`/`message`/`severity` (mapped from the JSON's `"error"`/`"warning"` strings to `vscode.DiagnosticSeverity`).
+- Each violation's `fixable` field (a plain boolean, not an executable fix object) drives the same Yes/No QuickPick ("Fix N of M?") as before. On "Yes", the extension re-invokes with `--fix` appended and re-renders diagnostics from whatever the rake task reports as still remaining — there is no client-side fix-application logic, and no confirmation on the `--fix` side beyond that one QuickPick.
+- `hasUnreplacedTokens`/`hasSkeletonMarker` (`libs/check.js`) were used only by the pre-delegation detection logic and were removed alongside it (thecore_code_extension#38) — don't reintroduce them for a similar-sounding future need without checking whether the check belongs in Ruby (`Thecore::CheckPractices`) instead. `ctx.workspace.concernsDir(type)` remains — it's still exposed by `ATOMContext`/`AppContext` for other uses, just no longer called from `checkPractices.js`.
 
 ### Adding a New Command
 

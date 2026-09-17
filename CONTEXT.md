@@ -23,7 +23,7 @@ What a Dual-context Command generates code into: the owning ATOM when invoked fr
 _Avoid_: context (collides with VS Code's "context menu" and `ExecutionContext`)
 
 **Dual-context Command**:
-An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action. Add a Model / Add a DB Migration only use the resolved Target to pick the `rails g` invocation's `--atom=<name>` flag (or omit it for the Main App) and to run their pre-flight guard checks — actual file placement is delegated to the `thecore_generators` Rails generator hook, not performed by the extension itself. Add a Root Action / Add a Member Action still template and move files into the Target themselves.
+An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action. All four only use the resolved Target to pick the `rails g` invocation's `--atom=<name>` flag (or omit it for the Main App) and to run their pre-flight guard checks — actual file placement is delegated to the `thecore_generators` Rails generator hook, not performed by the extension itself (thecore_code_extension#36/#37 brought Add a Root Action / Add a Member Action onto the same footing as Add a Model / Add a DB Migration).
 _Avoid_: ATOM command, app command
 
 **Action Companions**:
@@ -43,13 +43,13 @@ A single non-conformance detected during a Practices Audit, reported as a VS Cod
 _Avoid_: error, warning, issue (too generic)
 
 **Fixable Violation**:
-A Violation that carries an `apply(ctx)` fix function the extension can execute automatically when the user consents via the QuickPick prompt after the audit.
+A Violation whose JSON `fixable` field is `true`. Since thecore_code_extension#38, this is a plain boolean, not an executable fix the extension runs itself — the extension re-invokes `rails thecore:check_practices --fix` on user consent (via the QuickPick prompt after the audit) and `Thecore::CheckPractices` applies it and reports what remains.
 _Avoid_: auto-fix (alone), suggestion
 
 **Skeleton Marker**:
-A string that must be present in a generated file as structural evidence that the file was produced from the correct Thecore template (e.g. `RailsAdmin::Config::Actions.add_action`, `Rails.application.configure do`). Checked by `hasSkeletonMarker(content, marker)` in `libs/check.js`.
+A string that must be present in a generated file as structural evidence that the file was produced from the correct Thecore template (e.g. `RailsAdmin::Config::Actions.add_action`, `Rails.application.configure do`). Checked entirely on the Ruby side by `Thecore::CheckPractices` (in `thecore_generators`) since thecore_code_extension#38 — the extension no longer checks markers itself (`hasSkeletonMarker` in `libs/check.js` was removed alongside that delegation).
 _Avoid_: landmark, anchor
 
 **Thecore Generators Guard**:
-The pre-flight check `addModel`/`addMigration` run against the Target's `Gemfile` before shelling out to `rails generate`, verifying it depends on `thecore_generators` — without which `rails generate` still succeeds but silently skips all Thecore-aware behavior (ATOM placement, default-first concerns, inverse-association wiring). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
+The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
 _Avoid_: gem check (too generic), dependency check
