@@ -5,13 +5,14 @@ const vscode = require('vscode');
 const { insertGemIntoDevelopmentGroup } = require('./configs');
 
 // Keep this version constraint in sync with the thecore_generators release this extension is
-// tested against — see docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md and
-// docs/adr/0004-check-practices-structured-output-and-action-generator-resequencing.md in the
-// thecore repo. Bumped to ~> 3.6 (thecore_generators#15): 3.6.0 is the first version carrying
-// thecore:root_action/thecore:member_action/thecore:check_practices (thecore_generators#11-14),
-// which addRootAction.js/addMemberAction.js/checkPractices.js now depend on existing at all, not
-// just behaving correctly (thecore_code_extension#36/#37/#38).
-const GEM_LINE = 'gem "thecore_generators", "~> 3.6"';
+// tested against — see docs/adr/0002-thecore-generators-gem-and-generator-hook-mechanism.md,
+// docs/adr/0004-check-practices-structured-output-and-action-generator-resequencing.md, and
+// docs/adr/0006-atom-generator-dual-ci-manual-submodule-wiring-collection-action-reuses-existing-infra.md
+// in the thecore repo. Bumped to ~> 3.10 (thecore_code_extension#40): 3.10.0 is the first version
+// carrying thecore:atom (thecore_generators#20), which createATOM.js now depends on existing at
+// all, not just behaving correctly — same reasoning as the earlier ~> 3.6 bump for
+// thecore:root_action/thecore:member_action/thecore:check_practices (thecore_generators#11-14).
+const GEM_LINE = 'gem "thecore_generators", "~> 3.10"';
 
 const ACTION_LABEL = 'Add & Bundle Install';
 
