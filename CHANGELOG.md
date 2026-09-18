@@ -4,6 +4,17 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.8.0]
+
+### Added
+- `bin/thecore.js` — headless CLI, installable via `npm install -g` directly from this repo (not published to the npm registry). One subcommand today: `thecore setup-dev-container --name <name>`, equivalent to "Thecore 3: Setup Devcontainer" but scriptable without VS Code (closes #39)
+- `bin/vscode-shim.js` — minimal `vscode` API surface (`window.createOutputChannel`/`showErrorMessage`/`showInformationMessage`/`showWarningMessage`/`showInputBox`, `workspace.workspaceFolders`) letting `commands/setupDevContainer.js` run unmodified outside VS Code
+- `commander` added as a runtime dependency
+
+### Changed
+- `.vscodeignore` — excludes `bin/**` from the packaged `.vsix` (no purpose inside the VS Code extension runtime)
+- `CLAUDE.md` — new "Headless CLI" section documenting the install path; `bin/`/`test/bin/` added to the directory structure tree; `commander` added to the Dependencies table
+
 ## [3.7.0]
 
 ### Changed
