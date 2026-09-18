@@ -4,6 +4,12 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.9.0]
+
+### Changed
+- `commands/createApp.js` — now shells out to the App application template (`rails new -m <app_template.rb URL>`, requires `thecore_generators` >= 3.12.0 for its non-interactive mode) for the Rails skeleton, Gemfile stack, both CI files, devcontainer/CLAUDE.md assets, and the installer chain — instead of hand-rolling all of it in JS. `THECORE_APP_TEMPLATE_NON_INTERACTIVE=1 THECORE_APP_TEMPLATE_RUN_INSTALLERS=true` preserve the command's always-zero-prompt, always-installs-everything behavior exactly. Still owns, unchanged: `config/sidekiq.yml`, the `version` file, a `development.rb` patch, the custom `.gitignore`, `vendor/custombuilds`/`vendor/deploytargets`, `db:create`/`migrate`/`thecore:db:seed`, `.dockerignore` removal, and git init — now a single "Initial commit" instead of two (closes #41)
+- `CLAUDE.md` — new `createApp` subsection; corrected a "dual-context" terminology mislabel that had crept in for `createATOM`/`createApp` (both are actually single-context, host-app-only)
+
 ## [3.8.0]
 
 ### Added
