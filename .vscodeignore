@@ -14,6 +14,7 @@ node_modules/**
 extension.js
 tests/**
 test/**
+bin/**
 .github/**
 .agents/**
 .claude/**

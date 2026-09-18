@@ -23,6 +23,11 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) t
 ```
 .
 ├── extension.js              # Extension activation; registers all 7 commands
+├── bin/                      # Headless CLI (thecore_code_extension#39) — NOT part of the VS Code
+│   │                         # extension runtime, excluded from the vsix via .vscodeignore; exists
+│   │                         # purely as the package.json "bin" entry for `npm install -g`
+│   ├── thecore.js            # CLI entry point (commander); installs the vscode-shim require() hook
+│   └── vscode-shim.js        # Minimal vscode API surface for running commands/*.js outside VS Code
 ├── commands/                 # One file per command, each exports perform(ctx)
 │   ├── addMemberAction.js
 │   ├── addMigration.js
@@ -55,6 +60,8 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) t
 │   │   └── makeCtx.js        # Stub factory: makeCtx(), makeAtomWorkspace(), makeAppWorkspace()
 │   ├── *.test.js             # One test file per command
 │   ├── libs/                 # Unit tests for libs/
+│   ├── bin/                  # Tests for the headless CLI (real subprocess spawns -- see its
+│   │                         # own file header for why, not an in-process require('vscode'))
 │   └── samples/atom/         # Fixture: a minimal ATOM directory for tests
 ├── .github/workflows/main.yml # CI/CD: triggered by semver tags, publishes to Marketplace
 ├── .devcontainer/            # Dev container config (Dockerfile + devcontainer.json)
@@ -383,6 +390,7 @@ Each command runs `npm version <level>` (updates `package.json`, commits, create
 |---|---|---|
 | `js-yaml` | runtime | YAML serialization in `configs.js` |
 | `lodash` | runtime | `merge` for deep YAML merging |
+| `commander` | runtime | CLI flag/subcommand parsing for `bin/thecore.js` (thecore_code_extension#39) |
 | `mocha` | dev | Test runner |
 | `sinon` | dev | Stubs/mocks in tests |
 | `proxyquire` | dev | Module injection in tests (OS-level tests only) |
@@ -402,8 +410,35 @@ Each command runs `npm version <level>` (updates `package.json`, commits, create
 - `docs/**` — internal ADRs
 - `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc` — dev tooling config
 - `test/**`, `tests/**`, `src/**`, `node_modules/**`, `.github/**` — source/test/CI artifacts
+- `bin/**` — the headless CLI (thecore_code_extension#39); it has no purpose inside the VS Code
+  extension runtime (`extension.js` never requires it), so it's excluded from the vsix the same
+  way `test/**` is, even though it isn't test code. It's still shipped via `package.json`'s `bin`
+  entry, which `.vscodeignore` has no effect on — see "Headless CLI" below.
 
 What is intentionally included: `out/main.js`, `commands/`, `libs/`, `templates/`, `assets/`, `.devcontainer/`, `package.json`, `README.md`, `LICENSE.md`, `CHANGELOG.md`.
+
+---
+
+## Headless CLI (`bin/thecore.js`)
+
+Ships as a `bin` entry in this same `package.json` (`"thecore": "./bin/thecore.js"`) — not a
+separate npm package, not published to the npm registry (this repo's only publish target is the
+VS Code Marketplace/Open VSX, via `vsce`/`GitHub Actions`; see "Release Process" above). Install
+globally straight from a clone or the git remote:
+
+```bash
+npm install -g .                                                    # from a local clone
+npm install -g github:gabrieletassoni/thecore_code_extension#release/3  # directly from git
+```
+
+`bin/vscode-shim.js` implements a minimal `vscode` API surface (`window.createOutputChannel`,
+`window.showErrorMessage`/`showInformationMessage`/`showWarningMessage`/`showInputBox`,
+`workspace.workspaceFolders`) and installs it via a `Module._load` override (the real-runtime
+equivalent of `test/setup.js`'s own interception, kept as a separate file — see that file's
+header comment for why not shared) so `commands/*.js` can run completely unmodified outside VS
+Code. Currently wires up one subcommand, `thecore setup-dev-container --name <name>` (the one
+original extension command with no Rails-native equivalent to delegate to instead — see ADR 0007
+in the `thecore` repo) — structured so a future subcommand is an addition, not a redesign.
 
 ---
 

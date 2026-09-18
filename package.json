@@ -98,6 +98,9 @@
   },
   "license": "MIT",
   "icon": "assets/logo.png",
+  "bin": {
+    "thecore": "./bin/thecore.js"
+  },
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify",
     "esbuild-base": "rimraf out && esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
@@ -131,6 +134,7 @@
     "sinon": "^19.0.5"
   },
   "dependencies": {
+    "commander": "^12.1.0",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21"
   }
