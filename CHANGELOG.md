@@ -4,6 +4,12 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.6.1]
+
+### Fixed
+- `CLAUDE.md` — no longer claims "no ATOM generator exists yet"; now accurately states `thecore_generators`' `thecore:atom` generator exists (3.10.0/3.11.0, `thecore`'s ADR 0006) but `createATOM.js` itself hasn't been delegated to it yet (tracked separately, mirroring the #36/#37/#38 pattern)
+- `CONTEXT.md` — "Scaffold Files" glossary entry corrected: `lib/<atom_name>/abilities.rb` → `config/initializers/abilities.rb`
+
 ## [3.6.0]
 
 ### Changed
