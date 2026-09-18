@@ -4,6 +4,16 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.7.0]
+
+### Changed
+- `commands/createATOM.js` — now a thin wrapper shelling out to `rails g thecore:atom` (requires `thecore_generators` >= 3.10.0) instead of rendering templates and writing files itself; the same six VS Code dialog prompts (name/summary/description/author/email/url) are collected and passed through as `--non-interactive` flags. No more `mkdir`, template rendering, or CI YAML generation on the extension side (closes #40)
+- `libs/thecoreGeneratorsGuard.js` — `GEM_LINE` bumped to `~> 3.10`
+- `CLAUDE.md` — documents `createATOM`'s new delegation shape; corrects the "dual-context commands" summary (`createApp` is now the only command left doing its own file placement)
+
+### Removed
+- `templates/createATOM/` (`abilities.rb`, `after_initialize.rb`, `assets.rb`, `seeds.rb`) — no longer read by anything, since `createATOM.js`'s own delegation was their last reader
+
 ## [3.6.1]
 
 ### Fixed
