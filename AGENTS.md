@@ -114,7 +114,7 @@ Do **not** use `proxyquire` for command tests. Do **not** stub `fs` or `vscode.w
 
 ### VSIX Packaging — Dev Files Are Excluded
 
-`.vscodeignore` excludes all AI/dev files from the distributed VSIX (`.agents/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `PUBLISHING.md`, `docs/`, `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc`). This prevents `vsce`'s secret scanner from false-positiving on documentation that references PAT token names. Do not remove these entries from `.vscodeignore`.
+`.vscodeignore` excludes all AI/dev files from the distributed VSIX (`.agents/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `GLOSSARY.md`, `PUBLISHING.md`, `docs/`, `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc`). This prevents `vsce`'s secret scanner from false-positiving on documentation that references PAT token names. Do not remove these entries from `.vscodeignore`.
 
 ### Releasing
 
@@ -127,3 +127,7 @@ npm run release:major   # x.y.z → (x+1).0.0
 ```
 
 Each script runs `npm version`, commits, tags, and pushes. GitHub Actions then runs tests, packages the extension, and creates a GitHub Release.
+
+## Security scanning and agent skills
+
+See the "Security scanning" and "Agent skills" sections of `CLAUDE.md`. Issues live in this repository's GitHub Issues (`docs/agents/issue-tracker.md`), and the skills come from the `mattpocock-skills` plugin on the host, never vendored here.

@@ -20,7 +20,7 @@ bin/**
 .claude/**
 AGENTS.md
 CLAUDE.md
-CONTEXT.md
+GLOSSARY.md
 PUBLISHING.md
 docs/**
 .mocharc.yml

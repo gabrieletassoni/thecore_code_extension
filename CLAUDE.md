@@ -414,7 +414,7 @@ Each command runs `npm version <level>` (updates `package.json`, commits, create
 `.vscodeignore` controls what ends up in the distributed `.vsix`. The following are explicitly excluded because they are development/AI tooling with no value to extension users — and some (`.agents/`, `.claude/`, `PUBLISHING.md`, `CLAUDE.md`) can trigger `vsce`'s secret scanner:
 
 - `.agents/**`, `.claude/**` — AI skill files
-- `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `PUBLISHING.md` — dev/AI documentation
+- `AGENTS.md`, `CLAUDE.md`, `GLOSSARY.md`, `PUBLISHING.md` — dev/AI documentation
 - `docs/**` — internal ADRs
 - `.mocharc.yml`, `.vscode-test.mjs`, `jsconfig.json`, `.npmrc` — dev tooling config
 - `test/**`, `tests/**`, `src/**`, `node_modules/**`, `.github/**` — source/test/CI artifacts
@@ -457,3 +457,50 @@ in the `thecore` repo) — structured so a future subcommand is an addition, not
 - `releaseApp.js` exists but its command is commented out in `extension.js` — do not activate without understanding why it was disabled.
 - The `fmt` script in `package.json` targets `src/**/*.ts` (no-op for this project's JS files).
 - `mkDirP` always creates a `.keep` file in newly created directories — intentional for Git tracking.
+
+## Security scanning
+
+Configured in the GitHub repository settings, not in files:
+
+- **CodeQL** default setup (JavaScript/TypeScript, Ruby templates, the Actions workflows): on every
+  push to `release/3`, on pull requests and weekly. Findings: Security → Code scanning.
+- **Secret scanning with push protection**: a push containing a recognised secret is rejected. It
+  is the only check that blocks anything. If it fires on a real secret, remove it from the commit and
+  rotate the secret; never bypass it.
+- **Dependabot alerts and security updates** on `package-lock.json`: a vulnerable npm dependency
+  raises an alert and Dependabot opens a pull request with the fixed version. There is no
+  `dependabot.yml`, so no routine version-bump pull requests.
+- Findings never block a release: GitHub notifies the owner. When one needs work, open a GitHub
+  issue (see Agent skills).
+
+## Agent skills
+
+### Issue tracker
+
+Tasks, issues, bugs, tickets and specs for this repository live **only** in its GitHub Issues
+(`gabrieletassoni/thecore_code_extension`), handled with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+**Mandatory rule.** Whenever a skill or development work creates, reads, updates, comments on,
+assigns, blocks or closes a task, issue, bug, ticket or spec (for example /to-tickets, /to-spec,
+/triage, /wayfinder, /implement, /diagnosing-bugs, /code-review, closing a piece of work, a bug found
+during a session), do it in this repository's GitHub Issues following `docs/agents/issue-tracker.md`.
+Never use Odoo, `.scratch/` or local Markdown files as a tracker: Odoo is only for the repositories
+on Bancolini's GitLab. `#123` means a GitHub issue number of this repository. If `gh` doesn't work,
+stop and say so instead of falling back to another tracker.
+
+### Triage labels
+
+The five canonical triage roles map to GitHub labels with the same name (`needs-triage`,
+`needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily when the first
+term or decision is resolved. See `docs/agents/domain.md`.
+
+### Skills
+
+Matt Pocock's skills come from the `mattpocock-skills` Claude Code plugin installed on the
+developer's **host** (`claude plugins install mattpocock-skills`, official marketplace), never
+vendored here: no `.agents/skills/`, `.claude/commands/` or `skills-lock.json`. Its `ask-matt` skill
+maps how the skills connect.

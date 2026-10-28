@@ -116,7 +116,7 @@ describe('commands/setupDevContainer', () => {
         assert.ok(call[2].includes('gabrieletassoni/vscode-devcontainers-thecore:3'));
     });
 
-    it('wires prune-deleted-skills.sh (bundled globally in the image) into postCreateCommand', async () => {
+    it('takes Claude Code skills from the host plugin, never vendored (no npx skills, no prune)', async () => {
         const ctx = makeCtx();
         sinon.stub(fs, 'existsSync').returns(false);
         sinon.stub(fs, 'mkdirSync');
@@ -125,14 +125,16 @@ describe('commands/setupDevContainer', () => {
 
         await perform(ctx);
 
-        // prune-deleted-skills.sh ships in scripts/ (copied to /usr/bin/ in Dockerfile.common),
-        // not scaffolded per-project, so there is no ctx.write.textFile call for it.
-        const scriptCall = ctx.write.textFile.args.find(([, name]) => name === 'prune-deleted-skills.sh');
-        assert.ok(!scriptCall, 'prune-deleted-skills.sh should not be scaffolded into the project');
+        for (const script of ['link-host-home.sh', 'check-plugins.sh']) {
+            assert.ok(ctx.write.textFile.args.find(([, name]) => name === script), `${script} should be scaffolded`);
+        }
 
         const devcontainerCall = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
-        const parsed = parseJsonc(devcontainerCall[2]);
-        assert.ok(parsed.postCreateCommand.includes('prune-deleted-skills.sh'));
+        const { postCreateCommand } = parseJsonc(devcontainerCall[2]);
+        assert.ok(postCreateCommand.includes(`bash .devcontainer/link-host-home.sh '\${localEnv:USER}'`));
+        assert.ok(postCreateCommand.includes('bash .devcontainer/check-plugins.sh'));
+        assert.ok(!postCreateCommand.includes('npx skills'), 'skills must not be vendored into the project');
+        assert.ok(!postCreateCommand.includes('prune-deleted-skills.sh'), 'the image no longer ships prune-deleted-skills.sh');
     });
 
     it('does not run a bare `bundle update --bundler` in postCreateCommand', async () => {

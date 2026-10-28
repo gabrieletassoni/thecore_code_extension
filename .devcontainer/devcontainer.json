@@ -18,7 +18,7 @@
 	"features": {
 		"ghcr.io/devcontainers-extra/features/claude-code:2": {}
 	},
-	"postCreateCommand": "npx skills update --project --yes",
+	"postCreateCommand": "bash .devcontainer/link-host-home.sh '${localEnv:USER}' && bash .devcontainer/check-plugins.sh",
 	"mounts": [
 		"source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
 		"source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind"

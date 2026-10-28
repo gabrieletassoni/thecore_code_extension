@@ -44,6 +44,13 @@ async function perform(ctx) {
             ctx.write.textFile(devcontainerDir, 'backend.code-workspace',
                 renderTemplate('setupDevContainer/backend.code-workspace'));
 
+            // Run from postCreateCommand: Claude Code skills come from the host's plugin.
+            ctx.write.textFile(devcontainerDir, 'link-host-home.sh',
+                renderTemplate('setupDevContainer/link-host-home.sh'));
+
+            ctx.write.textFile(devcontainerDir, 'check-plugins.sh',
+                renderTemplate('setupDevContainer/check-plugins.sh'));
+
             // Stamped so thecore-motd.sh (see thecore_devcontainer/scripts/) can warn when
             // this scaffold predates the extension version baked into the dev image.
             ctx.write.textFile(devcontainerDir, '.thecore-template-version', EXTENSION_VERSION);

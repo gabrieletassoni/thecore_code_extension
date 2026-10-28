@@ -4,6 +4,14 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [3.10.0]
+
+### Changed
+- "Thecore 3: Setup Devcontainer" (`commands/setupDevContainer.js`) no longer vendors Matt Pocock's skills into new apps: it scaffolds `.devcontainer/link-host-home.sh` and `.devcontainer/check-plugins.sh`, and `postCreateCommand` runs them instead of `npx skills update` and `prune-deleted-skills.sh`. Skills come from the `mattpocock-skills` Claude Code plugin on the host, exposed through the `~/.claude` mounts (still commented out by default). Same mechanism `thecore/samples/devcontainer/`, which `createApp` already uses, and the `thecore_devcontainer` images, which no longer ship `prune-deleted-skills.sh`.
+- This repo's own `.devcontainer` uses the host plugin too; the vendored `.agents/skills/`, `.claude/skills` and `skills-lock.json` are gone.
+- `CONTEXT.md` renamed to `GLOSSARY.md`.
+- `CLAUDE.md`: new "Security scanning" (CodeQL, secret scanning with push protection, Dependabot on `package-lock.json`) and "Agent skills" (GitHub Issues as tracker, `docs/agents/`) sections.
+
 ## [3.9.0]
 
 ### Changed
