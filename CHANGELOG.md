@@ -4,7 +4,7 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [3.11.0]
 
 ### Added
 - "Thecore 3: Add a Collection Action" (`thecore.addCollectionAction`, `commands/addCollectionAction.js`), the third action command next to Add a Root Action and Add a Member Action. Same thin wrapper: guard checks, the `thecore_generators` guard, the snake_case name, an "already exists" pre-flight on `collectionActionsDir()` (`lib/collection_actions` in an ATOM, `config/collection_actions` in the Main App), then `bundle install && rails g thecore:collection_action "<name>" [--atom=<name>] --non-interactive` (`thecore_generators` >= 3.9.0, already covered by the guard's `~> 3.10`).
@@ -111,6 +111,6 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Command tests rewritten to use `makeCtx()` stub — no `proxyquire` required in command tests
 - Updated `CLAUDE.md` and `README.md` to reflect current architecture
 
-## [Unreleased]
+## [3.11.0]
 
 - Initial release
