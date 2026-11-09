@@ -7,6 +7,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 ### Added
+- "Thecore 3: Add a Collection Action" (`thecore.addCollectionAction`, `commands/addCollectionAction.js`), the third action command next to Add a Root Action and Add a Member Action. Same thin wrapper: guard checks, the `thecore_generators` guard, the snake_case name, an "already exists" pre-flight on `collectionActionsDir()` (`lib/collection_actions` in an ATOM, `config/collection_actions` in the Main App), then `bundle install && rails g thecore:collection_action "<name>" [--atom=<name>] --non-interactive` (`thecore_generators` >= 3.9.0, already covered by the guard's `~> 3.10`).
 - "Thecore 3: Setup Devcontainer" scaffolds `.devcontainer/heal-stale-containers.sh`, run by the new `initializeCommand` on the host before `docker compose up`. VS Code starts a compose devcontainer with `--no-recreate`, so containers stopped while their network was deleted (a `docker network prune`, a Docker upgrade) failed every start with `network <id> not found`, reboots included. The script removes that project's containers so compose recreates them; volumes are kept, healthy or running projects are untouched. Same file as `thecore_devcontainer/.devcontainer/heal-stale-containers.sh`, whose `test/heal-stale-containers.sh` covers it against a real Docker daemon.
 
 ## [3.10.0]

@@ -27,6 +27,7 @@ describe('Extension', () => {
             'thecore.createATOM',
             'thecore.addRootAction',
             'thecore.addMemberAction',
+            'thecore.addCollectionAction',
             'thecore.addMigration',
             'thecore.addModel',
             'thecore.checkPractices',

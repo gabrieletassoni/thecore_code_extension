@@ -33,6 +33,10 @@ function activate(context) {
         const ctx = new ExecutionContext('Thecore: Add member action', folder);
         require('./commands/addMemberAction').perform(ctx);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand('thecore.addCollectionAction', async (folder) => {
+        const ctx = new ExecutionContext('Thecore: Add collection action', folder);
+        require('./commands/addCollectionAction').perform(ctx);
+    }));
 
     context.subscriptions.push(vscode.commands.registerCommand('thecore.addMigration', async (folder) => {
         const ctx = new ExecutionContext('Thecore: Add migration', folder);

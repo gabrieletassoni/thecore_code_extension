@@ -48,7 +48,7 @@ Logging happens exclusively in `CheckContext` and `WriteContext` (inside `execut
 `libs/workspaceContext.js` exports a `from(folder)` factory that returns:
 
 - `ATOMContext` — when the clicked folder is anywhere inside an ATOM's tree (at or below `vendor/submodules/<atom>/`); resolves to the owning ATOM's root. Provides `atomDir`, `atomName`, and all path methods (`migrationDir()`, `memberActionsDir()`, etc.)
-- `AppContext` — for all other folders, and for invocations without a folder (Command Palette) when a workspace is open. Provides the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()` which point to `config/` instead of `lib/` (see `docs/adr/0001-main-app-actions-live-in-config.md`).
+- `AppContext` — for all other folders, and for invocations without a folder (Command Palette) when a workspace is open. Provides the same path methods rooted at the workspace root, except `memberActionsDir()`/`rootActionsDir()`/`collectionActionsDir()` which point to `config/` instead of `lib/` (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 - `null` — only when no folder was provided **and** no workspace is open.
 
 Commands check `ctx.workspace.type()` (`'atom'` or `'app'`) to branch behavior. Never access `vscode.workspace.workspaceFolders` directly in a command — use `ctx.check.workspaceExists()` and `ctx.workspace.*`.

@@ -30,7 +30,7 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 
 ### Main application and ATOM context
 
-These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). All four generator commands shell out to `rails g` and let the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) Rails generator hook place the files itself — the extension does no templating or file placement of its own for any of them (see [Model / Migration generation](#model--migration-generation) and [Root / Member Action generation](#root--member-action-generation) below). Main-app actions are generated into `config/root_actions` / `config/member_actions` (not `lib/`) so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
+These commands appear when right-clicking on any folder. Right-clicking on an ATOM folder (or any folder inside it) targets that ATOM; right-clicking anywhere else targets the main application (after verifying the workspace root is a valid Ruby on Rails app). All five generator commands shell out to `rails g` and let the [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) Rails generator hook place the files itself — the extension does no templating or file placement of its own for any of them (see [Model / Migration generation](#model--migration-generation) and [Root / Member / Collection Action generation](#root--member--collection-action-generation) below). Main-app actions are generated into `config/root_actions` / `config/member_actions` / `config/collection_actions` (not `lib/`) so that Zeitwerk never autoloads them (see `docs/adr/0001-main-app-actions-live-in-config.md`).
 
 | Command | Title | Description |
 |---|---|---|
@@ -38,6 +38,7 @@ These commands appear when right-clicking on any folder. Right-clicking on an AT
 | `thecore.addMigration` | Thecore 3: Add a DB Migration | Runs `rails g migration`, delegating placement to `thecore_generators`. |
 | `thecore.addRootAction` | Thecore 3: Add a Root Action | Generates a root-level action for the `rails_admin` backend UI (dashboard-style main menu section), including controller, view, assets, and i18n entries. |
 | `thecore.addMemberAction` | Thecore 3: Add a Member Action | Generates a member-level action for the `rails_admin` backend UI (per-row button in model list views), including controller, view, assets, and i18n entries. |
+| `thecore.addCollectionAction` | Thecore 3: Add a Collection Action | Generates a collection-level action for the `rails_admin` backend UI (acts on a model's list as a whole, e.g. saving or loading filters), including controller, view, assets, and i18n entries. |
 | `thecore.checkPractices` | Thecore 3: Check Practices | Audits the target (ATOM or main app) for Thecore structural conventions. Reports missing scaffold files, incomplete action companions, and model concern violations as VS Code diagnostics. Offers to auto-fix resolvable issues. |
 
 ## Usage
@@ -55,7 +56,7 @@ These commands appear when right-clicking on any folder. Right-clicking on an AT
 1. Open the Command Palette with `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS).
 2. Type `Thecore` and select the desired command.
 
-> Note: when invoked from the Command Palette there is no clicked folder, so commands that work in both contexts (`Add a Model`, `Add a DB Migration`, `Add a Root Action`, `Add a Member Action`) run against the **main application**. To target an ATOM, use the explorer context menu on the ATOM folder.
+> Note: when invoked from the Command Palette there is no clicked folder, so commands that work in both contexts (`Add a Model`, `Add a DB Migration`, `Add a Root Action`, `Add a Member Action`, `Add a Collection Action`) run against the **main application**. To target an ATOM, use the explorer context menu on the ATOM folder.
 
 ## Model / Migration generation
 
@@ -70,19 +71,19 @@ All of that is handled by the [`thecore_generators`](https://github.com/gabriele
 
 See `thecore_generators`' own README and the `docs/adr/` in the [`thecore`](https://github.com/gabrieletassoni/thecore) repo for the full behavior.
 
-## Root / Member Action generation
+## Root / Member / Collection Action generation
 
-`Add a Root Action` and `Add a Member Action` are thin wrappers too, the same way: the extension collects the snake_case action name, then shells out to `bundle install && rails g thecore:root_action|thecore:member_action "<name>" [--atom=<name>] --non-interactive` from the main application root and trusts the result — no template rendering, no `fs` writes, no locale YAML merging on the extension side. (The one thing the extension still checks itself is whether the action already exists, before shelling out, so a re-run gets a clear "already exists" error instead of risking a shelled, non-interactive process hitting an interactive file-collision prompt it could never answer.)
+`Add a Root Action`, `Add a Member Action` and `Add a Collection Action` are thin wrappers too, the same way: the extension collects the snake_case action name, then shells out to `bundle install && rails g thecore:root_action|thecore:member_action|thecore:collection_action "<name>" [--atom=<name>] --non-interactive` from the main application root and trusts the result — no template rendering, no `fs` writes, no locale YAML merging on the extension side. (The one thing the extension still checks itself is whether the action already exists, before shelling out, so a re-run gets a clear "already exists" error instead of risking a shelled, non-interactive process hitting an interactive file-collision prompt it could never answer.)
 
-`thecore_generators`' `rails generate thecore:root_action`/`thecore:member_action` (`Thecore::Generators::RootActionGenerator`/`MemberActionGenerator`) create the action file (RailsAdmin `:root`/`:member` action type), its view/JS/SCSS companions, the `config/initializers/after_initialize.rb` require line, the `config/initializers/assets.rb` precompile line, and locale entries in every `*.yml` already present under `config/locales` — all in one generator run, with the same ATOM-aware placement Model/Migration generation uses.
+`thecore_generators`' `rails generate thecore:root_action`/`thecore:member_action`/`thecore:collection_action` (`Thecore::Generators::RootActionGenerator`/`MemberActionGenerator`/`CollectionActionGenerator`, the last one since `thecore_generators` 3.9.0) create the action file (RailsAdmin `:root`/`:member`/`:collection` action type), its view/JS/SCSS companions, the `config/initializers/after_initialize.rb` require line, the `config/initializers/assets.rb` precompile line, and locale entries in every `*.yml` already present under `config/locales` — all in one generator run, with the same ATOM-aware placement Model/Migration generation uses.
 
 ### Missing `thecore_generators` guard
 
-Since `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` all fully trust `rails`, a Gemfile that doesn't actually depend on `thecore_generators` would otherwise fail silently (for `model`/`migration`, which still "work" but with none of the behavior above) or fail outright (`thecore:root_action`/`thecore:member_action`/`thecore:check_practices` simply don't exist as commands). All five commands check for `thecore_generators` in the workspace's `Gemfile` before shelling out:
+Since `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`addCollectionAction`/`checkPractices` all fully trust `rails`, a Gemfile that doesn't actually depend on `thecore_generators` would otherwise fail silently (for `model`/`migration`, which still "work" but with none of the behavior above) or fail outright (`thecore:root_action`/`thecore:member_action`/`thecore:collection_action`/`thecore:check_practices` simply don't exist as commands). All six commands check for `thecore_generators` in the workspace's `Gemfile` before shelling out:
 
 - **Present** — no change in behavior; the command proceeds exactly as described above.
 - **Missing** — a warning is shown explaining the risk, with an **"Add & Bundle Install"** action button.
-  - Clicking it adds `gem "thecore_generators", "~> 3.6"` inside a `group :development do ... end` block in the `Gemfile` (reusing one if the Gemfile already has a bare `group :development do` block, creating one otherwise), runs `bundle install`, and then proceeds with the original command.
+  - Clicking it adds `gem "thecore_generators", "~> 3.10"` inside a `group :development do ... end` block in the `Gemfile` (reusing one if the Gemfile already has a bare `group :development do` block, creating one otherwise), runs `bundle install`, and then proceeds with the original command.
   - Dismissing or cancelling the warning aborts the command entirely — nothing further is ever invoked.
 
 `thecore.createApp` adds `thecore_generators` to a new app's `Gemfile` automatically (same `group :development` block), so freshly-created Thecore 3 apps never hit this guard.

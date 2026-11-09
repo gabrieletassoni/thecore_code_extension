@@ -18,13 +18,13 @@ const ACTION_LABEL = 'Add & Bundle Install';
 
 const WARNING_MESSAGE =
     'thecore_generators is missing from this app\'s Gemfile. Without it, `rails generate model`/`migration`/' +
-    '`thecore:root_action`/`thecore:member_action` and `rails thecore:check_practices` silently fall back to ' +
+    '`thecore:root_action`/`thecore:member_action`/`thecore:collection_action` and `rails thecore:check_practices` silently fall back to ' +
     'plain, un-hooked Rails behavior (or fail outright, for the thecore:*-namespaced ones) — no ATOM-aware ' +
     'file placement, no default-first concerns, no inverse-association wiring, no action scaffolding, no ' +
     'practices audit — with no other indication anything is wrong.';
 
 /**
- * Shown by addModel.js/addMigration.js/addRootAction.js/addMemberAction.js/checkPractices.js
+ * Shown by addModel.js/addMigration.js/addRootAction.js/addMemberAction.js/addCollectionAction.js/checkPractices.js
  * after their existing guard checks pass and ctx.check.hasThecoreGenerators(gemfilePath) came
  * back not-ok, and before shelling out to `rails`. Only on explicit confirmation does it patch
  * the Gemfile (inside a
