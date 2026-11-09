@@ -1,26 +1,44 @@
-# Publishing to the VS Code Marketplace
+# Publishing the extension
+
+A release goes to three places:
+
+| Where | How |
+|---|---|
+| GitHub Release (with the `.vsix`) | automatic, `.github/workflows/main.yml` |
+| [Open VSX](https://open-vsx.org/extension/gabrieletassoni/thecore) | automatic, same workflow (`npx ovsx publish`) |
+| [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gabrieletassoni.thecore) | **by hand** (`npm run deploy`); the workflow has no Marketplace step |
 
 ## One-time setup
 
-1. **Create the publisher** on [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage) using the same Microsoft account as `gabrieletassoni`.
+**Open VSX** (used by the workflow):
 
-2. **Create a Personal Access Token (PAT)** on Azure DevOps:
-   - Go to `dev.azure.com` → user icon → *Personal Access Tokens*
-   - *Organization*: **All accessible organizations**
-   - *Scope*: **Marketplace → Manage**
+1. Sign in to [open-vsx.org](https://open-vsx.org) with the `gabrieletassoni` GitHub account and create an access token (*Settings → Access Tokens*).
+2. Add it to the GitHub repository as the secret `OVSX_PAT` (*Settings → Secrets and variables → Actions*).
 
-3. **Add the secret to the GitHub repository**:
-   - Go to `Settings → Secrets and variables → Actions → New repository secret`
-   - Name: `VSCE_PAT`, value: the token created above
+**VS Code Marketplace** (manual publish):
+
+1. The publisher `gabrieletassoni` exists on [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage), under the same Microsoft account.
+2. Create an Azure DevOps Personal Access Token: `dev.azure.com` → user icon → *Personal Access Tokens*, *Organization*: **All accessible organizations**, *Scope*: **Marketplace → Manage**. Keep it in your password manager; it never goes into the repository.
 
 ## How to release
 
-Bump the version in `package.json` before tagging — the Marketplace rejects versions that have already been published.
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to the new version (`## [3.12.0]`) and commit it.
+2. From a terminal, on `release/3` and in sync with `origin`, run one of:
 
-```bash
-# From the thecore_code_extension repository
-git tag v3.0.7
-git push origin v3.0.7
-```
+   ```bash
+   npm run release:patch   # x.y.Z → x.y.(Z+1)  — bug fixes
+   npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
+   npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
+   ```
 
-The workflow triggers on `v*` tags, builds the extension, creates a GitHub Release with the `.vsix` attached, and publishes to the Marketplace.
+   Each runs `npm version <level>`, which updates `package.json` and `package-lock.json`, commits, and creates the tag. Then it runs `git push --follow-tags`. The tag has no `v` prefix (`3.12.0`), because `.npmrc` sets `tag-version-prefix=` and the workflow only triggers on `[0-9]+.[0-9]+.[0-9]+`. A `v3.12.0` tag would not trigger it.
+3. The workflow runs the tests, packages the `.vsix`, creates the GitHub Release and publishes to Open VSX. Check that the run is green. Open VSX can take a few minutes to show the new version.
+4. Publish to the VS Code Marketplace by hand, from the same commit:
+
+   ```bash
+   VSCE_PAT=<your Azure DevOps PAT> npm run deploy   # vsce publish
+   ```
+
+   The Marketplace rejects a version it already has, so this only works once per version.
+
+The workflow can also be started by hand (*Actions → Publish GitHub Release → Run workflow*) with a `version` input. It uses that as the release tag, so the tag must already exist and match `package.json`.

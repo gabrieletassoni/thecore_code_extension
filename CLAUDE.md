@@ -64,7 +64,7 @@ A Visual Studio Code extension (publisher: `gabrieletassoni`, name: `thecore`) t
 │   ├── bin/                  # Tests for the headless CLI (real subprocess spawns -- see its
 │   │                         # own file header for why, not an in-process require('vscode'))
 │   └── samples/atom/         # Fixture: a minimal ATOM directory for tests
-├── .github/workflows/main.yml # CI/CD: triggered by semver tags, publishes to Marketplace
+├── .github/workflows/main.yml # CI/CD: triggered by semver tags; GitHub Release + Open VSX (Marketplace is manual, see PUBLISHING.md)
 ├── .devcontainer/            # Dev container config (Dockerfile + devcontainer.json)
 ├── .vscode/                  # launch.json, extensions.json
 ├── assets/logo.png           # Extension icon
@@ -371,14 +371,14 @@ timeout: 10000
 npm run build    # esbuild with sourcemaps → out/main.js
 npm run watch    # esbuild in watch mode
 npm run package  # vsce package → .vsix
-npm run deploy   # vsce publish to Marketplace
+npm run deploy   # vsce publish to the VS Code Marketplace (manual, needs VSCE_PAT; see PUBLISHING.md)
 ```
 
 ---
 
 ## Release Process
 
-Releases are automated via `.github/workflows/main.yml`. The version lives in exactly one place — `package.json`.
+Releases are tag-driven via `.github/workflows/main.yml`. The version lives in exactly one place — `package.json`. `PUBLISHING.md` is the step-by-step guide.
 
 ### Releasing (use the terminal, not VS Code Source Control)
 
@@ -388,15 +388,16 @@ npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
 npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
 ```
 
-Each command runs `npm version <level>` (updates `package.json`, commits, creates a tag) then `git push --follow-tags`. GitHub Actions then: runs tests → packages extension → creates GitHub Release with `.vsix`.
+Move `CHANGELOG.md`'s `## [Unreleased]` to the new version and commit it first. Each command runs `npm version <level>` (updates `package.json` and `package-lock.json`, commits, creates the tag) then `git push --follow-tags`. GitHub Actions then: runs tests → packages the `.vsix` → creates the GitHub Release with it → publishes to Open VSX (`npx ovsx publish`). **It does not publish to the VS Code Marketplace**: that is a manual `VSCE_PAT=<PAT> npm run deploy` from the same commit (3.11.0 reached Open VSX automatically; the Marketplace keeps the previous version until someone publishes by hand).
 
 ### Why no `v` prefix on tags
 
 `.npmrc` sets `tag-version-prefix=` (empty). Tags are `3.1.6` to match the CI trigger pattern `[0-9]+.[0-9]+.[0-9]+`.
 
-### Secret required
+### Secrets
 
-`VSCE_PAT` must be set in GitHub repository secrets — an Azure DevOps PAT with Marketplace → Manage scope.
+- `OVSX_PAT` — GitHub repository secret, an Open VSX access token; the workflow's only publish credential.
+- `VSCE_PAT` — an Azure DevOps PAT with Marketplace → Manage scope, used only for the manual `npm run deploy`. Keep it out of the repository and out of the workflow.
 
 ---
 
@@ -438,8 +439,8 @@ What is intentionally included: `out/main.js`, `commands/`, `libs/`, `templates/
 ## Headless CLI (`bin/thecore.js`)
 
 Ships as a `bin` entry in this same `package.json` (`"thecore": "./bin/thecore.js"`) — not a
-separate npm package, not published to the npm registry (this repo's only publish target is the
-VS Code Marketplace/Open VSX, via `vsce`/`GitHub Actions`; see "Release Process" above). Install
+separate npm package, not published to the npm registry (this repo publishes only to Open VSX, via GitHub Actions,
+and to the VS Code Marketplace, via a manual `vsce publish`; see "Release Process" above). Install
 globally straight from a clone or the git remote:
 
 ```bash
