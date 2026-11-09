@@ -18,6 +18,7 @@ class ATOMContext {
     concernsDir(type) { return path.join(this.atomDir, 'app', 'models', 'concerns', type); }
     memberActionsDir() { return path.join(this.atomDir, 'lib', 'member_actions'); }
     rootActionsDir() { return path.join(this.atomDir, 'lib', 'root_actions'); }
+    collectionActionsDir() { return path.join(this.atomDir, 'lib', 'collection_actions'); }
     localesDir() { return path.join(this.atomDir, 'config', 'locales'); }
     viewsDir() { return path.join(this.atomDir, 'app', 'views', 'rails_admin', 'main'); }
     jsAssetsDir() { return path.join(this.atomDir, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'); }
@@ -42,6 +43,7 @@ class AppContext {
     // (see docs/adr/0001-main-app-actions-live-in-config.md).
     memberActionsDir() { return path.join(this.root, 'config', 'member_actions'); }
     rootActionsDir() { return path.join(this.root, 'config', 'root_actions'); }
+    collectionActionsDir() { return path.join(this.root, 'config', 'collection_actions'); }
     localesDir() { return path.join(this.root, 'config', 'locales'); }
     viewsDir() { return path.join(this.root, 'app', 'views', 'rails_admin', 'main'); }
     jsAssetsDir() { return path.join(this.root, 'app', 'assets', 'javascripts', 'rails_admin', 'actions'); }

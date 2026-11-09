@@ -76,6 +76,9 @@ describe('libs/workspaceContext', () => {
         it('rootActionsDir() is inside atomDir/lib', () => {
             assert.strictEqual(ctx.rootActionsDir(), path.join(ATOM_DIR, 'lib', 'root_actions'));
         });
+        it('collectionActionsDir() is inside atomDir/lib', () => {
+            assert.strictEqual(ctx.collectionActionsDir(), path.join(ATOM_DIR, 'lib', 'collection_actions'));
+        });
         it('localesDir() is inside atomDir/config', () => {
             assert.strictEqual(ctx.localesDir(), path.join(ATOM_DIR, 'config', 'locales'));
         });
@@ -115,6 +118,9 @@ describe('libs/workspaceContext', () => {
         });
         it('rootActionsDir() is inside root/config (never autoloaded — see ADR 0001)', () => {
             assert.strictEqual(ctx.rootActionsDir(), path.join(APP_DIR, 'config', 'root_actions'));
+        });
+        it('collectionActionsDir() is inside root/config (never autoloaded — see ADR 0001)', () => {
+            assert.strictEqual(ctx.collectionActionsDir(), path.join(APP_DIR, 'config', 'collection_actions'));
         });
         it('localesDir() is inside root/config', () => {
             assert.strictEqual(ctx.localesDir(), path.join(APP_DIR, 'config', 'locales'));

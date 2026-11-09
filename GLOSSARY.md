@@ -18,16 +18,19 @@ A `rails_admin` backend UI action presented as a top-level navigation entry, not
 **Member Action**:
 A `rails_admin` backend UI action bound to a single record, presented as a per-row button in a model's list view.
 
+**Collection Action**:
+A `rails_admin` backend UI action bound to a model's list as a whole rather than to one record (e.g. saving or loading list filters).
+
 **Target**:
 What a Dual-context Command generates code into: the owning ATOM when invoked from anywhere inside that ATOM's folder tree, otherwise the Main App. Command Palette invocations (no clicked folder) target the Main App.
 _Avoid_: context (collides with VS Code's "context menu" and `ExecutionContext`)
 
 **Dual-context Command**:
-An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action. All four only use the resolved Target to pick the `rails g` invocation's `--atom=<name>` flag (or omit it for the Main App) and to run their pre-flight guard checks — actual file placement is delegated to the `thecore_generators` Rails generator hook, not performed by the extension itself (thecore_code_extension#36/#37 brought Add a Root Action / Add a Member Action onto the same footing as Add a Model / Add a DB Migration).
+An extension command that can generate into either Target: Add a Model, Add a DB Migration, Add a Root Action, Add a Member Action, Add a Collection Action. All five only use the resolved Target to pick the `rails g` invocation's `--atom=<name>` flag (or omit it for the Main App) and to run their pre-flight guard checks — actual file placement is delegated to the `thecore_generators` Rails generator hook, not performed by the extension itself (thecore_code_extension#36/#37 brought Add a Root Action / Add a Member Action onto the same footing as Add a Model / Add a DB Migration).
 _Avoid_: ATOM command, app command
 
 **Action Companions**:
-The complete set of files that must accompany a Root Action or Member Action `.rb` file for it to be fully functional: a view (`.html.erb`), a JavaScript asset (`.js`), a stylesheet (`.scss`), locale entries in each `config/locales/*.yml`, and a `require` line in `after_initialize.rb`.
+The complete set of files that must accompany a Root Action, Member Action or Collection Action `.rb` file for it to be fully functional: a view (`.html.erb`), a JavaScript asset (`.js`), a stylesheet (`.scss`), locale entries in each `config/locales/*.yml`, and a `require` line in `after_initialize.rb`.
 _Avoid_: action files (too broad), related files
 
 **Scaffold Files**:
@@ -51,7 +54,7 @@ A string that must be present in a generated file as structural evidence that th
 _Avoid_: landmark, anchor
 
 **Thecore Generators Guard**:
-The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
+The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`addCollectionAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
 _Avoid_: gem check (too generic), dependency check
 
 **Application Template**:
