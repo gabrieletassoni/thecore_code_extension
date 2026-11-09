@@ -7,6 +7,23 @@ const vscode = require('vscode');
 const { parse: parseJsonc } = require('jsonc-parser');
 const { perform } = require('../commands/setupDevContainer');
 const { makeCtx, FAKE_ROOT } = require('./helpers/makeCtx');
+const path = require('path');
+
+// Runs Setup Devcontainer with "My Project" as name and returns what it wrote,
+// as { fileName: content }.
+async function scaffold() {
+    const ctx = makeCtx();
+    sinon.stub(fs, 'existsSync').returns(false);
+    sinon.stub(fs, 'mkdirSync');
+    sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+    sinon.stub(vscode.window, 'showInformationMessage');
+    await perform(ctx);
+    return Object.fromEntries(ctx.write.textFile.args.map(([, name, content]) => [name, content]));
+}
+
+// The bind mounts every Thecore devcontainer has active (thecore samples/devcontainer,
+// spec #5 in thecore_devcontainer). gh/glab stay commented out (thecore ADR 0005).
+const ACTIVE_MOUNTS = ['.bundle', '.gem', '.claude', '.claude.json'];
 
 describe('commands/setupDevContainer', () => {
     beforeEach(() => {
@@ -181,5 +198,87 @@ describe('commands/setupDevContainer', () => {
             !/bundle update\s+--bundler(?!\S)/.test(parsed.postCreateCommand),
             'postCreateCommand should not run a bare `bundle update --bundler`'
         );
+    });
+
+    describe('the same devcontainer as the thecore samples', () => {
+        it('mounts the host ~/.bundle, ~/.gem, ~/.claude and ~/.claude.json, and not the gh/glab config', async () => {
+            const { mounts } = parseJsonc((await scaffold())['devcontainer.json']);
+            assert.ok(Array.isArray(mounts), 'mounts should be active, not commented out');
+            for (const entry of ACTIVE_MOUNTS) {
+                assert.ok(
+                    mounts.includes(`source=\${localEnv:HOME}/${entry},target=/home/vscode/${entry},type=bind`),
+                    `~/${entry} should be bind-mounted (got: ${JSON.stringify(mounts)})`,
+                );
+            }
+            assert.ok(!mounts.some(m => /\.config\/(gh|glab-cli)/.test(m)), 'gh/glab config mounts stay commented out');
+        });
+
+        it('creates every mounted host path in initializeCommand before healing stale containers', async () => {
+            const { initializeCommand, mounts } = parseJsonc((await scaffold())['devcontainer.json']);
+            const heal = initializeCommand.indexOf('bash .devcontainer/heal-stale-containers.sh');
+            assert.ok(heal > 0, `initializeCommand should end by healing stale containers (got: ${initializeCommand})`);
+            const prep = initializeCommand.slice(0, heal);
+            for (const mount of mounts) {
+                const source = mount.match(/source=([^,]+)/)[1];
+                assert.ok(prep.includes(`"${source}"`), `initializeCommand should create ${source} before the heal`);
+            }
+            assert.ok(/mkdir -p /.test(prep), 'directories are created with mkdir -p');
+            assert.ok(
+                prep.includes(`[ -e "\${localEnv:HOME}/.claude.json" ] || echo '{}' > "\${localEnv:HOME}/.claude.json"`),
+                '~/.claude.json is created as a JSON file, never overwritten',
+            );
+        });
+
+        it('runs the app container as vscode', async () => {
+            const compose = (await scaffold())['docker-compose.yml'];
+            assert.match(compose, /^ {4}user: vscode$/m);
+        });
+
+        it('mounts the project at the devcontainer workspace folder', async () => {
+            const files = await scaffold();
+            const { workspaceFolder } = parseJsonc(files['devcontainer.json']);
+            assert.strictEqual(workspaceFolder, '/workspaces/project/backend');
+            assert.ok(files['docker-compose.yml'].includes(`- ..:${workspaceFolder}:cached`));
+        });
+
+        it('runs the postCreateCommand chain of the samples, multi-account script included, without --all', async () => {
+            const { postCreateCommand } = parseJsonc((await scaffold())['devcontainer.json']);
+            assert.strictEqual(
+                postCreateCommand,
+                "sudo chown -R vscode:vscode /usr/local/bundle && bundle update && bash .devcontainer/link-host-home.sh '${localEnv:USER}' && bash .devcontainer/github-accounts.sh && bash .devcontainer/check-plugins.sh",
+            );
+        });
+
+        it('scaffolds every script the devcontainer runs', async () => {
+            const files = await scaffold();
+            const { initializeCommand, postCreateCommand } = parseJsonc(files['devcontainer.json']);
+            const scripts = [...`${initializeCommand} ${postCreateCommand}`.matchAll(/\.devcontainer\/([\w-]+\.sh)/g)].map(m => m[1]);
+            assert.deepStrictEqual(
+                [...new Set(scripts)].sort(),
+                ['check-plugins.sh', 'github-accounts.sh', 'heal-stale-containers.sh', 'link-host-home.sh'],
+            );
+            for (const script of scripts) {
+                assert.ok(files[script], `${script} should be scaffolded`);
+                assert.ok(files[script].startsWith('#!'), `${script} should be the real script`);
+            }
+        });
+
+        // Byte-level parity with a local thecore checkout, like thecore_generators' S1 test:
+        // runs only when THECORE_SAMPLES_DIR names a thecore `samples/` folder.
+        const samplesDir = process.env.THECORE_SAMPLES_DIR;
+        (samplesDir ? it : it.skip)('matches thecore samples/devcontainer except for the project name and workspace folder', async () => {
+            const files = await scaffold();
+            const sampleDir = path.join(samplesDir, 'devcontainer');
+            const sampleFiles = fs.readdirSync(sampleDir);
+            fs.existsSync.restore();
+            for (const name of sampleFiles) {
+                assert.ok(files[name] !== undefined, `${name} should be scaffolded`);
+                const actual = files[name]
+                    .replaceAll('/workspaces/project/backend', '/workspaces/app')
+                    .replace('"name": "My Project"', '"name": "Thecore App"')
+                    .replace('/my_project?', '/app_dev?');
+                assert.strictEqual(actual, fs.readFileSync(path.join(sampleDir, name), 'utf8'), `${name} differs from the samples`);
+            }
+        });
     });
 });

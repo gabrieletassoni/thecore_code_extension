@@ -48,6 +48,10 @@ async function perform(ctx) {
             ctx.write.textFile(devcontainerDir, 'link-host-home.sh',
                 renderTemplate('setupDevContainer/link-host-home.sh'));
 
+            // Run from postCreateCommand: git uses the right forwarded SSH key per GitHub account.
+            ctx.write.textFile(devcontainerDir, 'github-accounts.sh',
+                renderTemplate('setupDevContainer/github-accounts.sh'));
+
             ctx.write.textFile(devcontainerDir, 'check-plugins.sh',
                 renderTemplate('setupDevContainer/check-plugins.sh'));
 

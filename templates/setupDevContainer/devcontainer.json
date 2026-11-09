@@ -1,14 +1,22 @@
+// For format details, see https://aka.ms/devcontainers/containers/ruby-rails
 {
 	"name": "{{name}}",
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "app",
 	"workspaceFolder": "/workspaces/project/backend",
 
-	// Runs on the host before `docker compose up`: removes this project's
-	// containers when the network they point at no longer exists (a pruned
-	// network, a Docker upgrade), which otherwise fails every start with
-	// "network <id> not found". Volumes are kept. See the script's header.
-	"initializeCommand": "bash .devcontainer/heal-stale-containers.sh '${localWorkspaceFolder}'",
+	// Runs on the host before `docker compose up`, in two steps:
+	// 1. Creates the host paths of the bind mounts in "mounts" below when they
+	//    are missing (a fresh machine): a missing directory fails the mount and
+	//    stops the container from starting, and a missing file would be created
+	//    by Docker as a directory. ~/.claude.json gets `{}` so Claude Code reads
+	//    valid JSON; an existing one is never touched. Add any mount you
+	//    uncomment below to this list.
+	// 2. Removes this project's containers when the network they point at no
+	//    longer exists (a pruned network, a Docker upgrade), which otherwise
+	//    fails every start with "network <id> not found". Volumes are kept. See
+	//    the script's header.
+	"initializeCommand": "mkdir -p \"${localEnv:HOME}/.bundle\" \"${localEnv:HOME}/.gem\" \"${localEnv:HOME}/.claude\" && { [ -e \"${localEnv:HOME}/.claude.json\" ] || echo '{}' > \"${localEnv:HOME}/.claude.json\"; } && bash .devcontainer/heal-stale-containers.sh '${localWorkspaceFolder}'",
 
 	"customizations": {
 		"vscode": {
@@ -60,27 +68,58 @@
 		"ghcr.io/SrzStephen/devcontainer-features/gitlab-cli:1": {},
 		"ghcr.io/devcontainers/features/git-lfs:1": {},
 		"ghcr.io/devcontainers/features/python:1": {},
+		// Installs the Claude Code CLI and sets up its authentication environment.
 		"ghcr.io/devcontainers-extra/features/claude-code:2": {},
-		"ghcr.io/devcontainers-extra/features/apt-packages:1": { "packages": "graphviz" }
+		// Installs graphviz from distro apt repositories (used by `rails g erd:install`).
+		"ghcr.io/devcontainers-extra/features/apt-packages:1": {
+			"packages": "graphviz"
+		}
 	},
 
-	// Claude Code skills come from the host's mattpocock-skills plugin (uncomment the ~/.claude mounts below), never vendored.
-	"postCreateCommand": "sudo chown -R vscode:vscode /usr/local/bundle && bundle update --all && bash .devcontainer/link-host-home.sh '${localEnv:USER}' && bash .devcontainer/check-plugins.sh",
+	// The chown is a defensive self-heal: devcontainer features install as
+	// root during image build, which can leave gem binstubs under
+	// /usr/local/bundle/bin root-owned. That directory has the sticky bit
+	// set, so a later `bundle install`/`update` run as vscode gets EPERM
+	// trying to overwrite/delete a binstub it doesn't own — even though the
+	// directory itself is world-writable.
+	//
+	// link-host-home.sh aliases the host developer's own home directory name
+	// to /home/vscode, so absolute paths Claude Code bakes into its plugin
+	// registry under the host username (e.g. /home/<host-user>/.claude/...)
+	// still resolve inside the container, where the user is always `vscode`.
+	// ${localEnv:USER} is substituted from the HOST environment at
+	// container-create time, so this needs no per-developer configuration.
+	//
+	// github-accounts.sh lets a developer with several GitHub accounts push
+	// to each one's repositories: it asks GitHub which account each key in the
+	// forwarded SSH agent belongs to, and makes git use that key for remotes
+	// under that account. Does nothing with a single key; only warns on failure.
+	//
+	// Do NOT add `bundle update --bundler` (with no version) here. Bare
+	// `--bundler` makes Bundler's own SelfManager#find_latest_matching_spec
+	// query rubygems.org live, at container-create time, and pick the highest
+	// Gem::Version that exists there — with NO prerelease filtering (unlike
+	// plain `gem`/`bundle install` dependency resolution). Whatever the image
+	// ships with is irrelevant; this re-fetches "latest, prereleases included"
+	// on every single rebuild, and can silently rewrite Gemfile.lock's
+	// BUNDLED WITH to a prerelease. If bundler needs bumping, pin an explicit
+	// non-prerelease version at the call site (`bundle update --bundler
+	// X.Y.Z`) and update it deliberately — never leave `--bundler` bare.
+	"postCreateCommand": "sudo chown -R vscode:vscode /usr/local/bundle && bundle update && bash .devcontainer/link-host-home.sh '${localEnv:USER}' && bash .devcontainer/github-accounts.sh && bash .devcontainer/check-plugins.sh",
 
-	// "mounts": [
-	// 	Uncomment only the lines below matching auth/config you already have set up on your host —
-	// 	not everyone has glab/bundle/gem/Claude credentials in place, so nothing is mounted by default.
-	// 	// Requires: glab CLI already authenticated on the host (~/.config/glab-cli)
-	// 	"source=${localEnv:HOME}/.config/glab-cli,target=/home/vscode/.config/glab-cli,type=bind",
-	// 	// Requires: Bundler config already set up on the host (~/.bundle), e.g. credentials for private gem sources
-	// 	"source=${localEnv:HOME}/.bundle,target=/home/vscode/.bundle,type=bind",
-	// 	// Requires: RubyGems credentials already set up on the host (~/.gem), e.g. for pushing gems
-	// 	"source=${localEnv:HOME}/.gem,target=/home/vscode/.gem,type=bind",
-	// 	// Requires: Claude Code config already present on the host (~/.claude)
-	// 	"source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",
-	// 	// Requires: Claude Code already authenticated on the host (~/.claude.json)
-	// 	"source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind"
-	// ],
+	// Persist host-side auth so bundler/gem and Claude Code don't need
+	// re-authentication after every container rebuild. The gh/glab CLI config
+	// mounts below are commented out by default — uncomment whichever one(s)
+	// you already have configured on your host OS to reuse that auth inside
+	// the container instead of authenticating again from scratch.
+	"mounts": [
+		// "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind",
+		// "source=${localEnv:HOME}/.config/glab-cli,target=/home/vscode/.config/glab-cli,type=bind",
+		"source=${localEnv:HOME}/.bundle,target=/home/vscode/.bundle,type=bind",
+		"source=${localEnv:HOME}/.gem,target=/home/vscode/.gem,type=bind",
+		"source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",
+		"source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind"
+	],
 
 	"remoteUser": "vscode"
 }

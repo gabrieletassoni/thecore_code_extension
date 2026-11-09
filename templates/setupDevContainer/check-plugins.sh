@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Non-blocking check: this repo no longer vendors Matt Pocock's Claude Code
-# skills locally.
-# It relies on the `mattpocock-skills` plugin being installed and enabled on
-# the HOST machine; the `~/.claude` bind mount (commented out by default in
-# devcontainer.json `mounts`: uncomment it) then exposes the plugin's files here, and
-# link-host-home.sh (run just before this script from `postCreateCommand`)
-# makes the absolute paths Claude Code's own plugin registry recorded on the
-# host resolve correctly too — together
-# these require no further container-side configuration.
+# Non-blocking check: this repo doesn't vendor Matt Pocock's Claude Code
+# skills locally. It relies on the `mattpocock-skills` plugin being installed
+# and enabled on the HOST machine; the devcontainer's existing `~/.claude`
+# bind mount (see devcontainer.json `mounts`) then exposes the plugin's files
+# here, and link-host-home.sh (run just before this script from
+# `postCreateCommand`) makes the absolute paths Claude Code's own plugin
+# registry recorded on the host resolve correctly too — together these
+# require no further container-side configuration.
 #
 # This script only warns — it never fails the build.
 set -uo pipefail
@@ -29,9 +28,6 @@ if [ "$installed" != true ] || [ "$enabled" != true ]; then
    container until you install it on the HOST (not inside the container):
 
      claude plugins install mattpocock-skills
-
-   and uncomment the two Claude Code lines (~/.claude, ~/.claude.json) under "mounts" in
-   .devcontainer/devcontainer.json, then rebuild the container.
 
    (official Claude Code marketplace, nothing else to add first — see
    https://github.com/mattpocock/skills)

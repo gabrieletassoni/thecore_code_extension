@@ -24,7 +24,7 @@ These commands appear when right-clicking on any folder **outside** `vendor/subm
 
 | Command | Title | Description |
 |---|---|---|
-| `thecore.setupDevcontainer` | Thecore 3: Setup Devcontainer | Creates the `.devcontainer` configuration (Dockerfile, docker-compose) for the current workspace. |
+| `thecore.setupDevcontainer` | Thecore 3: Setup Devcontainer | Creates the `.devcontainer` configuration (Dockerfile, docker-compose, helper scripts) for the current workspace: the same devcontainer as the `thecore` samples. |
 | `thecore.createApp` | Thecore 3: Create an App | Scaffolds a new Thecore 3 Rails application with all required dependencies and folder structure, including [`thecore_generators`](https://github.com/gabrieletassoni/thecore_generators) (added inside a `group :development do ... end` block in the generated `Gemfile` — see [Model / Migration generation](#model--migration-generation)). |
 | `thecore.createATOM` | Thecore 3: Create an ATOM | Creates a new Rails engine (ATOM) as a reusable, self-contained submodule. |
 

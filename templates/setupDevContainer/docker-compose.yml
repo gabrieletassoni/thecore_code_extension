@@ -30,11 +30,10 @@ services:
     # so anything that isn't `postCreateCommand` (which devcontainer.json's
     # remoteUser runs as vscode) — devcontainer feature installs, the
     # `sleep infinity` command, a plain `docker compose exec` — creates
-    # root-owned files. That mixed ownership can break `bundle
-    # update`/`bundle install`: /usr/local/bundle/bin has the sticky bit set,
-    # so vscode can't overwrite or delete binstubs it doesn't own.
-    # Uncomment the next line to use a non-root user for all processes.
-    # user: vscode
+    # root-owned files. That mixed ownership breaks `bundle update`/`bundle
+    # install`: /usr/local/bundle/bin has the sticky bit set, so vscode can't
+    # overwrite or delete binstubs it doesn't own.
+    user: vscode
 
     # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
     # (Adding the "ports" property to this file will not forward from a Codespace.)
@@ -49,6 +48,10 @@ services:
       retries: 30
 
   db:
+    # Pin both the Postgres major version AND the base OS (bookworm) — Postgres
+    # doesn't provide its own collations, it uses the base OS's, so a bare
+    # `postgres:15` tag silently moving to a newer Debian release (as it did
+    # from bullseye to bookworm) is a breaking change, not just a patch bump.
     image: postgres:15-bookworm
     volumes:
       - postgres-data:/var/lib/postgresql/data
