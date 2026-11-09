@@ -4,6 +4,11 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Added
+- "Thecore 3: Setup Devcontainer" scaffolds `.devcontainer/heal-stale-containers.sh`, run by the new `initializeCommand` on the host before `docker compose up`. VS Code starts a compose devcontainer with `--no-recreate`, so containers stopped while their network was deleted (a `docker network prune`, a Docker upgrade) failed every start with `network <id> not found`, reboots included. The script removes that project's containers so compose recreates them; volumes are kept, healthy or running projects are untouched. Same file as `thecore_devcontainer/.devcontainer/heal-stale-containers.sh`, whose `test/heal-stale-containers.sh` covers it against a real Docker daemon.
+
 ## [3.10.0]
 
 ### Changed

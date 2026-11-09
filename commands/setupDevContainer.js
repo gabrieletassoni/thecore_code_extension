@@ -51,6 +51,10 @@ async function perform(ctx) {
             ctx.write.textFile(devcontainerDir, 'check-plugins.sh',
                 renderTemplate('setupDevContainer/check-plugins.sh'));
 
+            // Run from initializeCommand, on the host: heals containers left on a deleted network.
+            ctx.write.textFile(devcontainerDir, 'heal-stale-containers.sh',
+                renderTemplate('setupDevContainer/heal-stale-containers.sh'));
+
             // Stamped so thecore-motd.sh (see thecore_devcontainer/scripts/) can warn when
             // this scaffold predates the extension version baked into the dev image.
             ctx.write.textFile(devcontainerDir, '.thecore-template-version', EXTENSION_VERSION);

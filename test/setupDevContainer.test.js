@@ -137,6 +137,27 @@ describe('commands/setupDevContainer', () => {
         assert.ok(!postCreateCommand.includes('prune-deleted-skills.sh'), 'the image no longer ships prune-deleted-skills.sh');
     });
 
+    it('heals containers left on a deleted network before compose starts them (initializeCommand)', async () => {
+        const ctx = makeCtx();
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        const script = ctx.write.textFile.args.find(([, name]) => name === 'heal-stale-containers.sh');
+        assert.ok(script, 'heal-stale-containers.sh should be scaffolded');
+        assert.ok(script[2].includes('docker rm'), 'heal-stale-containers.sh should be the real script, not an empty file');
+
+        const devcontainerCall = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
+        const { initializeCommand } = parseJsonc(devcontainerCall[2]);
+        assert.ok(
+            (initializeCommand || '').includes(`bash .devcontainer/heal-stale-containers.sh '\${localWorkspaceFolder}'`),
+            `initializeCommand should run heal-stale-containers.sh on the workspace folder (got: ${initializeCommand})`,
+        );
+    });
+
     it('does not run a bare `bundle update --bundler` in postCreateCommand', async () => {
         const ctx = makeCtx();
         sinon.stub(fs, 'existsSync').returns(false);
