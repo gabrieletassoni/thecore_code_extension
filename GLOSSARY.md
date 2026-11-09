@@ -54,7 +54,7 @@ A string that must be present in a generated file as structural evidence that th
 _Avoid_: landmark, anchor
 
 **Thecore Generators Guard**:
-The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`addCollectionAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
+The pre-flight check `addModel`/`addMigration`/`addRootAction`/`addMemberAction`/`addCollectionAction`/`checkPractices` all run against the Target's `Gemfile` before shelling out to `rails`, verifying it depends on `thecore_generators` — without which `rails generate model`/`migration` still succeed but silently skip all Thecore-aware behavior, and `thecore:root_action`/`thecore:member_action`/`thecore:collection_action`/`thecore:check_practices` fail outright (they don't exist without the gem). On a missing dependency, a confirm-to-fix prompt (`libs/thecoreGeneratorsGuard.js`) offers to add the gem (inside a `group :development do ... end` block) and run `bundle install`; dismissing it aborts the command.
 _Avoid_: gem check (too generic), dependency check
 
 **Application Template**:
