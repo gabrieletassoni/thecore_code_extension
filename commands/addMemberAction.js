@@ -21,7 +21,7 @@ async function perform(ctx) {
     const isAtom = ctx.workspace.type() === 'atom';
 
     // Everything below runs inside try/catch, matching addMigration.js/addRootAction.js (not
-    // addModel.js — see CLAUDE.md's "try/catch scope" note): only the initial workspaceExists
+    // addModel.js — see docs/agents/commands.md's "try/catch scope" note): only the initial workspaceExists
     // check sits outside it, since perform() is never awaited/caught by extension.js and real
     // I/O starts as early as the thecore_generators guard below.
     try {
@@ -67,7 +67,7 @@ async function perform(ctx) {
         // (thecore_generators#12): it creates the action file, its view/JS/SCSS companions, the
         // after_initialize.rb require line, the assets.rb precompile line, and locale entries,
         // with the same ATOM-aware placement addModel.js/addMigration.js/addRootAction.js
-        // already delegate to — see CLAUDE.md's "addModel / addMigration / addRootAction /
+        // already delegate to — see docs/agents/commands.md's "addModel / addMigration / addRootAction /
         // addMemberAction — thin wrappers" section for the full rationale. This command's only
         // remaining job is to shell out and trust it.
         const atomFlag = isAtom ? ` --atom=${ctx.workspace.atomName}` : '';

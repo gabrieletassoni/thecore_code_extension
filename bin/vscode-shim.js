@@ -41,7 +41,7 @@ function createOutputChannel() {
 function showErrorMessage(message) {
     process.stderr.write(`${message}\n`);
     // Every command in this codebase treats reaching showErrorMessage as the
-    // "something went wrong" outcome (see CLAUDE.md's "Error Handling" convention)
+    // "something went wrong" outcome (see docs/agents/conventions.md's "Error Handling")
     // -- commands/*.js's own try/catch swallows the underlying error and never lets
     // it propagate back out of perform(), so this is the one place a CLI-friendly
     // non-zero exit code can be set for a failure a command handled internally.

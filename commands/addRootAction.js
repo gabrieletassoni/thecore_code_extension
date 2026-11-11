@@ -21,7 +21,7 @@ async function perform(ctx) {
     const isAtom = ctx.workspace.type() === 'atom';
 
     // Everything below runs inside try/catch, matching addMigration.js (not addModel.js, which
-    // leaves its own guard checks/input collection outside try — see CLAUDE.md's "Command
+    // leaves its own guard checks/input collection outside try — see docs/agents/conventions.md's "Command
     // Structure"/"Error Handling" conventions: only the initial workspaceExists check sits
     // outside it). perform() is never awaited/caught by extension.js, so anything thrown outside
     // this try would surface as a silent, un-logged rejection instead of the usual
@@ -69,7 +69,7 @@ async function perform(ctx) {
         // thecore_generators ships `rails generate thecore:root_action` (thecore_generators#11):
         // it creates the action file, its view/JS/SCSS companions, the after_initialize.rb
         // require line, the assets.rb precompile line, and locale entries, with the same
-        // ATOM-aware placement addModel.js/addMigration.js already delegate to — see CLAUDE.md's
+        // ATOM-aware placement addModel.js/addMigration.js already delegate to — see docs/agents/commands.md's
         // "addModel / addMigration / addRootAction — thin wrappers" section for the full
         // rationale (including why `--non-interactive` is passed even though this generator
         // declares no option by that name). This command's only remaining job is to shell out

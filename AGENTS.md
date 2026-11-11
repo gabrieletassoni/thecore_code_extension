@@ -15,7 +15,7 @@ Only after completing this sequence should any code be written.
 
 ## General Context
 
-See [CLAUDE.md](CLAUDE.md) for full project overview, directory structure, and conventions.
+See [CLAUDE.md](CLAUDE.md) for full project overview, directory structure, and conventions; topic detail lives in the `docs/agents/` files its "Read before working on…" table points to.
 
 ## Key Architecture Facts for Agents
 
@@ -130,4 +130,4 @@ Each script runs `npm version`, commits, tags, and pushes. GitHub Actions then r
 
 ## Security scanning and agent skills
 
-See the "Security scanning" and "Agent skills" sections of `CLAUDE.md`. Issues live in this repository's GitHub Issues (`docs/agents/issue-tracker.md`), and the skills come from the `mattpocock-skills` plugin on the host, never vendored here.
+See `docs/agents/security-scanning.md` and the "Agent skills" section of `CLAUDE.md`. Issues live in this repository's GitHub Issues (`docs/agents/issue-tracker.md`), and the skills come from the `mattpocock-skills` plugin on the host, never vendored here.

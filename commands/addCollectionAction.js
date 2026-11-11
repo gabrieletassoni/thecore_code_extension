@@ -20,7 +20,7 @@ async function perform(ctx) {
 
     const isAtom = ctx.workspace.type() === 'atom';
 
-    // Same shape as addRootAction.js/addMemberAction.js (see CLAUDE.md's "try/catch scope"
+    // Same shape as addRootAction.js/addMemberAction.js (see docs/agents/commands.md's "try/catch scope"
     // note): only the initial workspaceExists check sits outside the try.
     try {
         if (isAtom) {
