@@ -175,6 +175,33 @@ describe('commands/setupDevContainer', () => {
         );
     });
 
+    it('gives vscode the host\'s docker.sock group (initializeCommand + group_add), keeping .env out of git', async () => {
+        const ctx = makeCtx();
+        sinon.stub(fs, 'existsSync').returns(false);
+        sinon.stub(fs, 'mkdirSync');
+        sinon.stub(vscode.window, 'showInputBox').resolves('My Project');
+        sinon.stub(vscode.window, 'showInformationMessage');
+
+        await perform(ctx);
+
+        const script = ctx.write.textFile.args.find(([, name]) => name === 'docker-socket-gid.sh');
+        assert.ok(script, 'docker-socket-gid.sh should be scaffolded');
+        assert.ok(script[2].includes('DOCKER_SOCKET_GID='), 'docker-socket-gid.sh should be the real script, not an empty file');
+
+        const devcontainerCall = ctx.write.textFile.args.find(([, name]) => name === 'devcontainer.json');
+        const { initializeCommand } = parseJsonc(devcontainerCall[2]);
+        assert.ok(
+            (initializeCommand || '').includes('bash .devcontainer/docker-socket-gid.sh'),
+            `initializeCommand should run docker-socket-gid.sh (got: ${initializeCommand})`,
+        );
+
+        const composeCall = ctx.write.textFile.args.find(([, name]) => name === 'docker-compose.yml');
+        assert.ok(composeCall[2].includes('- "${DOCKER_SOCKET_GID:-996}"'), 'the app service should group_add the socket gid');
+
+        const gitignore = ctx.write.textFile.args.find(([, name]) => name === '.gitignore');
+        assert.ok(gitignore && gitignore[2].split('\n').includes('/.env'), '.devcontainer/.gitignore should ignore the per-host .env');
+    });
+
     it('does not run a bare `bundle update --bundler` in postCreateCommand', async () => {
         const ctx = makeCtx();
         sinon.stub(fs, 'existsSync').returns(false);
@@ -255,7 +282,7 @@ describe('commands/setupDevContainer', () => {
             const scripts = [...`${initializeCommand} ${postCreateCommand}`.matchAll(/\.devcontainer\/([\w-]+\.sh)/g)].map(m => m[1]);
             assert.deepStrictEqual(
                 [...new Set(scripts)].sort(),
-                ['check-plugins.sh', 'github-accounts.sh', 'heal-stale-containers.sh', 'link-host-home.sh'],
+                ['check-plugins.sh', 'docker-socket-gid.sh', 'github-accounts.sh', 'heal-stale-containers.sh', 'link-host-home.sh'],
             );
             for (const script of scripts) {
                 assert.ok(files[script], `${script} should be scaffolded`);

@@ -4,6 +4,11 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Added
+- "Thecore 3: Setup Devcontainer" scaffolds `.devcontainer/docker-socket-gid.sh`, run last by `initializeCommand` on the host, and `docker-compose.yml` adds its result to the app container with `group_add: ["${DOCKER_SOCKET_GID:-996}"]`. The bind-mounted `docker.sock` keeps the host's group id, which rarely matches the image's `docker` group (996), so `docker` as `vscode` failed with `permission denied` and worked only through `sudo`. The script writes the socket's gid to `.devcontainer/.env`; a new scaffolded `.devcontainer/.gitignore` keeps that per-host file out of git (Rails' `.gitignore` only covers `/.env*` at the root). Same file as `thecore_devcontainer/.devcontainer/docker-socket-gid.sh` (its ADR 0006), tested there by `test/docker-socket-gid.sh`. ADR 0003.
+
 ## [3.11.0]
 
 ### Added

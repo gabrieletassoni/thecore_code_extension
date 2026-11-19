@@ -59,6 +59,15 @@ async function perform(ctx) {
             ctx.write.textFile(devcontainerDir, 'heal-stale-containers.sh',
                 renderTemplate('setupDevContainer/heal-stale-containers.sh'));
 
+            // Run from initializeCommand, on the host: hands the docker.sock gid to compose's group_add.
+            ctx.write.textFile(devcontainerDir, 'docker-socket-gid.sh',
+                renderTemplate('setupDevContainer/docker-socket-gid.sh'));
+
+            // Keeps that per-host .env out of git (Rails' .gitignore only covers /.env* at the root).
+            // The template has no leading dot: .vscodeignore drops .gitignore files from the package.
+            ctx.write.textFile(devcontainerDir, '.gitignore',
+                renderTemplate('setupDevContainer/gitignore'));
+
             // Stamped so thecore-motd.sh (see thecore_devcontainer/scripts/) can warn when
             // this scaffold predates the extension version baked into the dev image.
             ctx.write.textFile(devcontainerDir, '.thecore-template-version', EXTENSION_VERSION);
