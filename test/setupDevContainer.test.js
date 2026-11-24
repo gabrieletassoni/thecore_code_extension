@@ -276,6 +276,18 @@ describe('commands/setupDevContainer', () => {
             );
         });
 
+        // On-demand system tests (thecore ADR 0010): a browser the app reaches through
+        // SELENIUM_URL, and a test LDAP server loaded from the scaffolded LDIF.
+        it('runs a selenium browser and an ldap test server for the system tests', async () => {
+            const files = await scaffold();
+            const compose = files['docker-compose.yml'];
+            assert.match(compose, /^ {2}selenium:\n {4}(#.*\n {4})*image: selenium\/standalone-chromium:\d/m);
+            assert.match(compose, /^ {6}SELENIUM_URL: http:\/\/selenium:4444$/m);
+            assert.match(compose, /^ {2}ldap:\n {4}image: osixia\/openldap:\d/m);
+            assert.match(compose, /^ {6}- \.\/ldap-users\.ldif:\/container\/service\/slapd\/assets\/config\/bootstrap\/ldif\/custom\//m);
+            assert.match(files['ldap-users.ldif'] || '', /^mail: ldap\.user@example\.com$/m, 'ldap-users.ldif should be scaffolded');
+        });
+
         it('scaffolds every script the devcontainer runs', async () => {
             const files = await scaffold();
             const { initializeCommand, postCreateCommand } = parseJsonc(files['devcontainer.json']);

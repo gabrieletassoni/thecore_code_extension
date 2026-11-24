@@ -63,6 +63,10 @@ async function perform(ctx) {
             ctx.write.textFile(devcontainerDir, 'docker-socket-gid.sh',
                 renderTemplate('setupDevContainer/docker-socket-gid.sh'));
 
+            // The test user of docker-compose.yml's `ldap` service, for the system tests (thecore ADR 0010).
+            ctx.write.textFile(devcontainerDir, 'ldap-users.ldif',
+                renderTemplate('setupDevContainer/ldap-users.ldif'));
+
             // Keeps that per-host .env out of git (Rails' .gitignore only covers /.env* at the root).
             // The template has no leading dot: .vscodeignore drops .gitignore files from the package.
             ctx.write.textFile(devcontainerDir, '.gitignore',

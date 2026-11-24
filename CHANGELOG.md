@@ -4,6 +4,11 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Added
+- "Thecore 3: Setup Devcontainer" adds the services for on-demand Rails system tests (`thecore` ADR 0010, #50) to `docker-compose.yml`: `selenium` (`selenium/standalone-chromium:4.54.0`, with `SELENIUM_URL=http://selenium:4444` on the app container) and `ldap` (`osixia/openldap:1.5.0`, test-only admin `cn=admin,dc=example,dc=com` / `admin`), which loads the newly scaffolded `.devcontainer/ldap-users.ldif` (one test user). Same content as `thecore`'s `samples/devcontainer/`; the App template fetches the matching `test/application_system_test_case.rb` and smoke test. `bin/rails test:system` runs them; CI's `bin/rails test` skips them.
+
 ## [3.12.0]
 
 ### Added
