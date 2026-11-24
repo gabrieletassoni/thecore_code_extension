@@ -10,7 +10,7 @@
 
 **Framework:** Mocha + Sinon (no proxyquire needed for command tests)
 
-**Run tests** (mocha 12: Node 20.19+ or 22.12+; CI runs Node 24, the devcontainer's `lts` Node 26 works too — mocha 10 did not start on Node 26, #49):
+**Run tests** (mocha 12: Node 20.19+ or 22.12+; CI runs Node 24, the devcontainer's `lts` Node 26 works too — mocha 10 did not start on Node 26, #49; `engines.node` `>=20` is the extension's runtime floor, running the tests needs 20.19+):
 ```bash
 npm test          # Mocha unit tests (no VS Code process needed)
 npm run test:vscode  # Full VS Code integration tests
@@ -32,6 +32,8 @@ npm run test:vscode  # Full VS Code integration tests
 - Use proxyquire only for OS-level tests (`os.test.js`)
 - Stub `fs` / `vscode` directly for `check.test.js` and `executionContext.test.js`
 - `check.test.js` calls may pass extra args (legacy `oc()`) — these are silently ignored
+
+**Repository checks** (`test/changelog.test.js`): read a real repo file, no stubs. It fails when a `CHANGELOG.md` version heading repeats or an `[Unreleased]` heading is not the single top one (the release step renames only the top one, #48).
 
 **Mocha config (`.mocharc.yml`):**
 ```yaml

@@ -44,6 +44,7 @@
 │   ├── helpers/
 │   │   └── makeCtx.js        # Stub factory: makeCtx(), makeAtomWorkspace(), makeAppWorkspace()
 │   ├── *.test.js             # One test file per command
+│   ├── changelog.test.js     # Repo-file check: one CHANGELOG heading per version (#48)
 │   ├── libs/                 # Unit tests for libs/
 │   ├── bin/                  # Tests for the headless CLI (real subprocess spawns -- see its
 │   │                         # own file header for why, not an in-process require('vscode'))

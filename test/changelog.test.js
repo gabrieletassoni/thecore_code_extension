@@ -7,8 +7,9 @@ const path = require('path');
 describe('CHANGELOG.md', () => {
     const headings = fs.readFileSync(path.join(__dirname, '..', 'CHANGELOG.md'), 'utf8')
         .split('\n')
-        .filter(line => line.startsWith('## ['))
-        .map(line => line.match(/^## \[([^\]]+)\]/)[1]);
+        .map(line => line.match(/^## \[([^\]]+)\]/))
+        .filter(Boolean)
+        .map(match => match[1]);
 
     it('names each version in one heading only', () => {
         const duplicates = headings.filter((name, i) => headings.indexOf(name) !== i);
