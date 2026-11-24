@@ -1,6 +1,6 @@
 # CLAUDE.md — Thecore VS Code Extension
 
-VS Code extension (publisher `gabrieletassoni`, name `thecore`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Rails apps and their engines (**ATOMs**). Nearly every command is a thin wrapper that shells out to `thecore_generators` (`rails g ...`, `rails thecore:check_practices`, the App template). Version lives only in `package.json`. Entry point `extension.js`; bundle `out/main.js` (esbuild, never edit it). VS Code `^1.85.0`, Node `>=18`.
+VS Code extension (publisher `gabrieletassoni`, name `thecore`) that scaffolds and manages [Thecore 3](https://github.com/gabrieletassoni/thecore) Rails apps and their engines (**ATOMs**). Nearly every command is a thin wrapper that shells out to `thecore_generators` (`rails g ...`, `rails thecore:check_practices`, the App template). Version lives only in `package.json`. Entry point `extension.js`; bundle `out/main.js` (esbuild, never edit it). VS Code `^1.85.0`, Node `>=20`.
 
 > **⚠️ MANDATORY — read [AGENTS.md](AGENTS.md) before writing any code.**
 > When implementing a new feature or changing the codebase, AGENTS.md requires running the
@@ -67,12 +67,12 @@ Command tests use `makeCtx()` from `test/helpers/makeCtx.js`: no proxyquire, no 
 
 ## Releasing
 
-`npm run release:patch|minor|major` from the terminal, never VS Code Source Control, never a manual tag; move `CHANGELOG.md`'s `## [Unreleased]` first. Tags carry no `v` prefix. CI publishes to Open VSX only; the Marketplace is a manual `VSCE_PAT=<PAT> npm run deploy`. Keep `VSCE_PAT` out of the repository and the workflow. Don't remove the dev/AI entries (including `docs/**`) from `.vscodeignore`.
+`npm run release:patch|minor|major` from the terminal, never VS Code Source Control, never a manual tag; rename `CHANGELOG.md`'s top `## [Unreleased]` (only that one) first. Tags carry no `v` prefix. CI publishes to Open VSX only; the Marketplace is a manual `VSCE_PAT=<PAT> npm run deploy`. Keep `VSCE_PAT` out of the repository and the workflow. Don't remove the dev/AI entries (including `docs/**`) from `.vscodeignore`.
 
 ## Known Quirks
 
 - `workspaceExixtence` has a typo (`Exixtence` not `Existence`) — this is the existing exported name; do not rename without updating all callers and tests.
-- `rubyOnRailsAppValidity` accepts a `hideErrorMessage` first parameter — retained for API compatibility but has no effect since the function is now pure (it never logged anyway after migration).
+- `rubyOnRailsAppValidity` accepts a `_hideErrorMessage` first parameter — retained for API compatibility but has no effect since the function is now pure (it never logged anyway after migration); the `_` prefix keeps `npm run lint` quiet.
 - `releaseApp.js` exists but its command is commented out in `extension.js` — do not activate without understanding why it was disabled.
 - The `fmt` script in `package.json` targets `src/**/*.ts` (no-op for this project's JS files).
 - `mkDirP` always creates a `.keep` file in newly created directories — intentional for Git tracking.

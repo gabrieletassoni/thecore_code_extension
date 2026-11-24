@@ -8,7 +8,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Fixed
 - `npm test` starts on Node 26: mocha 10's bundled yargs 16 was loaded as ESM there. mocha 12 (Node 20.19+ / 22.12+); the suite passes on Node 24 (CI) and 26 (#49).
-- `npm run lint` parses every file again (`ecmaVersion` 2018 rejected `catch` without a binding in `libs/check.js`) and reports no warnings: the `out/` bundle is ignored, dead variables and the unused `hideErrorMessage` parameter of `rubyOnRailsAppValidity` are gone (#47).
+- `npm run lint` parses every file again (`ecmaVersion` 2018 rejected `catch` without a binding in `libs/check.js`) and reports no warnings: the `out/` bundle is ignored, dead variables are gone, and unused `_`-prefixed parameters (mocks, `rubyOnRailsAppValidity`'s kept `_hideErrorMessage`) are allowed (#47).
+- `CHANGELOG.md` had two `## [3.11.0]` headings: the 3.11.0 release renamed every `## [Unreleased]`, including the template's "Initial release" stub at the bottom, which is now gone. `PUBLISHING.md` says to rename only the top one, and `test/changelog.test.js` fails on a repeated version or a second `[Unreleased]` (#48).
 
 ## [3.13.0]
 
@@ -127,6 +128,3 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Command tests rewritten to use `makeCtx()` stub — no `proxyquire` required in command tests
 - Updated `CLAUDE.md` and `README.md` to reflect current architecture
 
-## [3.11.0]
-
-- Initial release

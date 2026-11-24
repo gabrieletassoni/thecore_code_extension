@@ -22,7 +22,7 @@ A release goes to three places:
 
 ## How to release
 
-1. In `CHANGELOG.md`, rename `## [Unreleased]` to the new version (`## [3.12.0]`) and commit it.
+1. In `CHANGELOG.md`, rename the top `## [Unreleased]` heading, and only that one, to the new version (`## [3.12.0]`), then commit it. Don't use a replace-all: `npm test` fails if a version heading appears twice (`test/changelog.test.js`).
 2. From a terminal, on `release/3` and in sync with `origin`, run one of:
 
    ```bash

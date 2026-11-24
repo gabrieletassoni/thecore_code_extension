@@ -13,7 +13,7 @@ function workspaceEmptiness() {
     return vscode.workspace.workspaceFolders.length <= 1;
 }
 
-function rubyOnRailsAppValidity() {
+function rubyOnRailsAppValidity(_hideErrorMessage = false) {
     const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
     const dirNames = ['app', 'bin', 'config', 'db', 'lib', 'log', 'public', 'storage', 'test', 'tmp', 'vendor'];
     const allExist = dirNames.every(d => fs.existsSync(path.join(workspaceRoot, d)));
