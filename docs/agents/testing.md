@@ -10,7 +10,7 @@
 
 **Framework:** Mocha + Sinon (no proxyquire needed for command tests)
 
-**Run tests:**
+**Run tests** (mocha 12: Node 20.19+ or 22.12+; CI runs Node 24, the devcontainer's `lts` Node 26 works too — mocha 10 did not start on Node 26, #49):
 ```bash
 npm test          # Mocha unit tests (no VS Code process needed)
 npm run test:vscode  # Full VS Code integration tests
