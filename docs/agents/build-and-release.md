@@ -45,7 +45,7 @@ Move `CHANGELOG.md`'s `## [Unreleased]` to the new version and commit it first. 
 | `sinon` | dev | Stubs/mocks in tests |
 | `proxyquire` | dev | Module injection in tests (OS-level tests only) |
 | `esbuild` | dev | Fast bundler |
-| `eslint` | dev | Linting |
+| `eslint` | dev | Linting (`npm run lint`, clean: `ecmaVersion: "latest"`, `out/` ignored, unused `_`-prefixed args allowed; not run by CI) |
 | `prettier` | dev | Formatting |
 | `@vscode/vsce` | dev | Extension packaging/publishing |
 

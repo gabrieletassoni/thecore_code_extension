@@ -3,7 +3,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
 const proxyquire = require('proxyquire');
 
@@ -215,9 +214,6 @@ describe('libs/executionContext — CheckContext', () => {
     describe('exec()', () => {
         it('delegates to execShell with the channel', async () => {
             const execShellStub = sinon.stub().resolves('output');
-            const configs = require('../../libs/configs');
-            const wc = require('../../libs/workspaceContext');
-            const templates = require('../../libs/templates');
             const ExecCtxWithStub = proxyquire('../../libs/executionContext', {
                 './os': { execShell: execShellStub, mkDirP: sinon.stub() },
             });

@@ -3,7 +3,6 @@
 const assert = require('assert');
 const sinon = require('sinon');
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
 const { perform } = require('../commands/createATOM');
 const { makeCtx, makeAppWorkspace, FAKE_ROOT } = require('./helpers/makeCtx');

@@ -15,7 +15,7 @@ const { vscode, setInputAnswers } = require('./vscode-shim');
 // copy rather than a shared one -- this file is a real dependency for anyone who
 // installs the CLI, while test/setup.js is mocha-only.
 const originalLoad = Module._load;
-Module._load = function (request, parent, isMain) {
+Module._load = function (request) {
     if (request === 'vscode') return vscode;
     return originalLoad.apply(this, arguments);
 };

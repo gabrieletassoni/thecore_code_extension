@@ -10,7 +10,7 @@ const path = require('path');
 
 const originalLoad = Module._load;
 
-Module._load = function (request, parent, isMain) {
+Module._load = function (request) {
     if (request === 'vscode') {
         return require(path.resolve(__dirname, 'vscode.mock'));
     }

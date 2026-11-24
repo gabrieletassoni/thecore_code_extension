@@ -8,6 +8,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Fixed
 - `npm test` starts on Node 26: mocha 10's bundled yargs 16 was loaded as ESM there. mocha 12 (Node 20.19+ / 22.12+); the suite passes on Node 24 (CI) and 26 (#49).
+- `npm run lint` parses every file again (`ecmaVersion` 2018 rejected `catch` without a binding in `libs/check.js`) and reports no warnings: the `out/` bundle is ignored, dead variables and the unused `hideErrorMessage` parameter of `rubyOnRailsAppValidity` are gone (#47).
 
 ## [3.13.0]
 
