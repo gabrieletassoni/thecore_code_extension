@@ -4,7 +4,7 @@ All notable changes to the "thecore" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [3.13.1]
 
 ### Fixed
 - `npm test` starts on Node 26: mocha 10's bundled yargs 16 was loaded as ESM there. mocha 12 (Node 20.19+ / 22.12+); the suite passes on Node 24 (CI) and 26 (#49).
