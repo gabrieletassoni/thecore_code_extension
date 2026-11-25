@@ -23,7 +23,7 @@ npm run release:minor   # x.Y.z → x.(Y+1).0  — new features
 npm run release:major   # X.y.z → (X+1).0.0  — breaking changes
 ```
 
-Rename `CHANGELOG.md`'s top `## [Unreleased]` heading (only that one, never a replace-all) to the new version and commit it first; `test/changelog.test.js` fails on a repeated version heading. Each command runs `npm version <level>` (updates `package.json` and `package-lock.json`, commits, creates the tag) then `git push --follow-tags`. GitHub Actions then: runs tests → packages the `.vsix` → creates the GitHub Release with it → publishes to Open VSX (`npx ovsx publish`). **It does not publish to the VS Code Marketplace**: that is a manual `VSCE_PAT=<PAT> npm run deploy` from the same commit (3.11.0 reached Open VSX automatically; the Marketplace keeps the previous version until someone publishes by hand).
+Rename `CHANGELOG.md`'s top `## [Unreleased]` heading (only that one, never a replace-all) to the new version and commit it first; `test/changelog.test.js` fails on a repeated version heading. Each command runs `npm version <level>` (updates `package.json` and `package-lock.json`, commits as `chore(release): X.Y.Z` via `.npmrc`'s `message`, creates the tag) then `git push --follow-tags`. GitHub Actions then: runs tests → packages the `.vsix` → creates the GitHub Release with it → publishes to Open VSX (`npx ovsx publish`). **It does not publish to the VS Code Marketplace**: that is a manual `VSCE_PAT=<PAT> npm run deploy` from the same commit (3.11.0 reached Open VSX automatically; the Marketplace keeps the previous version until someone publishes by hand).
 
 ### Why no `v` prefix on tags
 
